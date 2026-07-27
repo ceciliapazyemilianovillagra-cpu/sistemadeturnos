@@ -1,0 +1,2650 @@
+<!--
+  Sistema Universal de Gestión de Turnos PRO
+  Marca blanca / Multirubro / v7.0 PRO
+  index.html
+
+  NUEVO en v3:
+  - Botón "💳 Enviar pago" en modal de turno → WA con monto + datos bancarios
+  - Vista "Solicitudes" (carrito público): listado, cambio de estado, cobro
+  - Sección "Pagos" en Configuración: CBU, Alias, MercadoPago, otra billetera
+  - Plantilla de pago personalizable
+  - WA Negocio + Email Admin en ajustes
+-->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <title>Sistema de Turnos PRO v7</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    :root{
+      --navy:#0b1f3a; --navy2:#102b50; --navys:#163b6d;
+      --bg:#f4f7fb; --card:#ffffff; --muted:#64748b;
+      --line:#dde7f3; --accent:#91c8ff;
+      --ok:#b8f7d4; --warn:#ffd6a5; --danger:#ffb3c6; --violet:#d7c7ff;
+      --text:#172033; --shadow:0 18px 40px rgba(10,31,58,.11);
+      --r:20px;
+    }
+    *{box-sizing:border-box;}
+    body{margin:0;background:var(--bg);color:var(--text);
+      font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;}
+    .hidden{display:none!important;}
+
+    /* ── SHELL ─────────────────────────────── */
+    #app{display:grid;grid-template-columns:272px 1fr;min-height:100vh;}
+
+    /* ── SIDEBAR ───────────────────────────── */
+    .sidebar{
+      background:linear-gradient(175deg,var(--navy),var(--navy2) 70%,var(--navys));
+      color:#fff;padding:22px 16px;
+      position:sticky;top:0;height:100vh;overflow-y:auto;
+      display:flex;flex-direction:column;
+    }
+    .brand{display:flex;align-items:center;gap:12px;margin-bottom:26px;}
+    .brand-logo{
+      width:44px;height:44px;border-radius:14px;flex-shrink:0;
+      background:linear-gradient(135deg,var(--accent),var(--violet));
+      display:grid;place-items:center;color:var(--navy);
+      font-weight:900;font-size:15px;overflow:hidden;
+      box-shadow:0 8px 20px rgba(145,200,255,.22);
+    }
+    .brand-title{font-weight:800;line-height:1.1;font-size:15px;}
+    .brand-sub{color:#b8d0ef;font-size:11px;margin-top:2px;}
+    .nav-btn{
+      width:100%;border:0;background:transparent;color:#cce0fa;
+      display:flex;align-items:center;gap:10px;padding:11px 13px;
+      border-radius:13px;margin-bottom:4px;text-align:left;
+      font-size:14px;font-weight:600;cursor:pointer;transition:.15s;
+    }
+    .nav-btn:hover,.nav-btn.active{background:rgba(255,255,255,.12);color:#fff;}
+    .nav-btn .nav-icon{font-size:17px;width:22px;text-align:center;flex-shrink:0;}
+    .sidebar-user{
+      margin-top:auto;padding:14px;border-radius:16px;
+      background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);
+    }
+    .sidebar-user strong{font-size:14px;}
+    .sidebar-user .role-badge{
+      font-size:11px;color:#91c8ff;font-weight:700;
+      background:rgba(145,200,255,.15);padding:2px 8px;border-radius:99px;
+      display:inline-block;margin-top:4px;
+    }
+
+    /* ── MAIN ──────────────────────────────── */
+    .main{padding:24px;min-width:0;}
+    .topbar{
+      display:flex;justify-content:space-between;align-items:center;
+      gap:14px;margin-bottom:22px;flex-wrap:wrap;
+    }
+    .page-title h1{font-size:26px;margin:0;color:var(--navy);font-weight:850;}
+    .page-title p{margin:4px 0 0;color:var(--muted);font-size:13px;}
+
+    .search-wrap{position:relative;}
+    .search-box{
+      display:flex;align-items:center;gap:8px;background:#fff;
+      border:1px solid var(--line);padding:9px 14px;
+      border-radius:999px;min-width:270px;
+      box-shadow:0 6px 18px rgba(10,31,58,.06);
+    }
+    .search-box input{border:0;outline:none;width:100%;background:transparent;font-size:13px;}
+    .search-dropdown{
+      position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:50;
+      background:#fff;border:1px solid var(--line);border-radius:14px;
+      box-shadow:var(--shadow);max-height:260px;overflow-y:auto;
+    }
+    .search-dropdown-item{
+      padding:10px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--line);
+      transition:background .1s;
+    }
+    .search-dropdown-item:last-child{border-bottom:0;}
+    .search-dropdown-item:hover{background:#f7fbff;}
+    .search-dropdown-item strong{display:block;color:var(--navy);}
+    .search-dropdown-item span{color:var(--muted);font-size:12px;}
+
+    /* ── CARDS ─────────────────────────────── */
+    .card-soft{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);}
+
+    /* ── KPI GRID ──────────────────────────── */
+    .kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:20px;}
+    .kpi{padding:18px 20px;}
+    .kpi small{color:var(--muted);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.4px;}
+    .kpi strong{display:block;color:var(--navy);font-size:28px;font-weight:850;margin-top:6px;line-height:1;}
+    .kpi-icon{font-size:22px;margin-bottom:6px;}
+
+    /* ── TURNO MINI ─────────────────────────── */
+    .section-grid{display:grid;grid-template-columns:1.3fr .7fr;gap:16px;}
+    .panel{padding:20px;}
+    .panel h3{color:var(--navy);font-weight:850;font-size:17px;margin-bottom:14px;}
+    .turno-mini{
+      display:grid;grid-template-columns:60px 1fr auto;
+      gap:10px;padding:12px;border-radius:14px;
+      border:1px solid var(--line);margin-bottom:8px;
+      background:#fbfdff;cursor:pointer;transition:box-shadow .15s;
+    }
+    .turno-mini:hover{box-shadow:0 4px 16px rgba(10,31,58,.08);}
+    .time-pill{
+      background:#eff6ff;color:var(--navy);font-weight:800;
+      padding:7px 6px;border-radius:10px;text-align:center;font-size:13px;
+      align-self:start;line-height:1.2;
+    }
+
+    /* ── STATUS BADGES ─────────────────────── */
+    .status{display:inline-flex;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:800;color:#172033;white-space:nowrap;}
+    .st-Pendiente{background:var(--warn);}
+    .st-Confirmado{background:var(--accent);}
+    .st-Realizado{background:var(--ok);}
+    .st-Cancelado{background:var(--danger);}
+    .st-PagoEnviado{background:#e0e7ff;color:#3730a3;}
+    .st-Pagado{background:#d1fae5;color:#065f46;}
+    .st-Cancelado{background:var(--danger);}
+
+    /* ── BOTONES ───────────────────────────── */
+    .btn-navy{background:var(--navy);color:#fff;border:0;border-radius:12px;padding:9px 16px;font-weight:700;font-size:13px;cursor:pointer;transition:.15s;}
+    .btn-navy:hover{background:var(--navys);color:#fff;}
+    .btn-soft{border:1px solid var(--line);background:#fff;border-radius:12px;padding:8px 14px;font-weight:600;color:var(--navy);font-size:13px;cursor:pointer;transition:.15s;}
+    .btn-soft:hover{background:#f7fbff;}
+    .btn-icon{border:0;background:#eef5ff;color:var(--navy);border-radius:10px;padding:7px 9px;font-size:13px;cursor:pointer;transition:.15s;}
+    .btn-icon:hover{background:#dbeafe;}
+    .btn-danger{border:0;background:#fff0f0;color:#c0392b;border-radius:10px;padding:7px 9px;font-size:13px;cursor:pointer;}
+    .fab{
+      position:fixed;right:26px;bottom:26px;width:58px;height:58px;
+      border-radius:18px;background:linear-gradient(135deg,var(--navy),var(--navys));
+      color:#fff;border:0;box-shadow:0 16px 36px rgba(11,31,58,.3);
+      font-size:26px;z-index:40;cursor:pointer;transition:.15s;
+    }
+    .fab:hover{transform:scale(1.05);}
+
+    /* ── AGENDA ────────────────────────────── */
+    .agenda-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+    .date-nav{display:flex;gap:8px;align-items:center;}
+    .date-nav input{border:1px solid var(--line);border-radius:12px;padding:9px;font-weight:700;font-size:13px;outline:none;}
+    .agenda-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:#fff;}
+    .agenda-grid{display:grid;min-width:fit-content;}
+    .ag-head,.ag-hour,.ag-cell{border-bottom:1px solid var(--line);border-right:1px solid var(--line);}
+    .ag-head{
+      background:var(--navy);color:#fff;font-weight:800;font-size:12px;
+      padding:12px 14px;position:sticky;top:0;z-index:3;
+    }
+    .ag-hour{
+      background:#f8fbff;color:var(--muted);font-weight:800;font-size:12px;
+      text-align:center;padding:0 6px;display:flex;align-items:center;justify-content:center;
+      min-height:60px;
+    }
+    .ag-cell{min-height:60px;padding:4px;transition:background .1s;}
+    .ag-cell:hover{background:#f7fbff;}
+    .appt{
+      border-radius:10px;padding:7px 9px;font-size:12px;cursor:pointer;
+      border:1px solid rgba(0,0,0,.06);box-shadow:0 2px 8px rgba(10,31,58,.06);
+      margin-bottom:3px;
+    }
+    .appt strong{display:block;color:var(--navy);font-size:12px;}
+    .mobile-list{display:none;}
+
+    /* ── CLIENTES ──────────────────────────── */
+    .client-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;}
+    .client-card{padding:16px;}
+    .client-card h4{font-size:15px;color:var(--navy);font-weight:800;margin:0 0 6px;}
+
+    /* ── CONFIG ────────────────────────────── */
+    .config-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;}
+    .config-card{padding:20px;}
+    .config-card h4{font-size:15px;color:var(--navy);font-weight:800;margin:0 0 14px;padding-bottom:10px;border-bottom:1px solid var(--line);}
+
+    /* ── FORMS ─────────────────────────────── */
+    .form-control,.form-select{border-radius:11px;border-color:var(--line);padding:9px 12px;font-size:13px;}
+    .form-label{font-weight:700;color:var(--navy);font-size:12px;margin-bottom:5px;text-transform:uppercase;letter-spacing:.3px;}
+
+    /* ── MODAL ─────────────────────────────── */
+    .modalx-backdrop{
+      position:fixed;inset:0;background:rgba(11,31,58,.55);
+      display:grid;place-items:center;z-index:100;padding:16px;
+      animation:fadein .15s;
+    }
+    .modalx{
+      background:#fff;width:min(720px,100%);max-height:92vh;
+      overflow:auto;border-radius:24px;
+      box-shadow:0 30px 90px rgba(0,0,0,.22);
+      animation:pop .14s ease-out;
+    }
+    @keyframes fadein{from{opacity:0}to{opacity:1}}
+    @keyframes pop{from{transform:scale(.96);opacity:.3}to{transform:scale(1);opacity:1}}
+    .modalx-header{
+      background:var(--navy);color:#fff;padding:18px 22px;
+      display:flex;justify-content:space-between;align-items:center;
+      position:sticky;top:0;z-index:2;
+    }
+    .modalx-header h3{margin:0;font-size:17px;font-weight:800;}
+    .modalx-close{border:0;background:rgba(255,255,255,.12);color:#fff;width:32px;height:32px;border-radius:10px;font-size:18px;cursor:pointer;}
+    .modalx-body{padding:22px;}
+
+    /* ── TOAST ─────────────────────────────── */
+    #toastRoot{position:fixed;top:18px;right:18px;z-index:200;display:flex;flex-direction:column;gap:8px;pointer-events:none;}
+    .toastx{
+      background:#fff;color:var(--navy);border-left:5px solid var(--accent);
+      box-shadow:var(--shadow);padding:12px 16px;border-radius:14px;
+      max-width:320px;font-weight:700;font-size:13px;pointer-events:all;
+      animation:slideIn .2s ease-out;
+    }
+    @keyframes slideIn{from{transform:translateX(110%);opacity:0}to{transform:none;opacity:1}}
+
+    /* ── CLIENT AUTOCOMPLETE IN MODAL ──────── */
+    .client-ac-wrap{position:relative;}
+    .client-ac-list{
+      position:absolute;top:100%;left:0;right:0;z-index:99;
+      background:#fff;border:1px solid var(--line);border-radius:12px;
+      box-shadow:var(--shadow);max-height:200px;overflow-y:auto;margin-top:4px;
+    }
+    .client-ac-item{padding:9px 13px;cursor:pointer;border-bottom:1px solid var(--line);font-size:13px;}
+    .client-ac-item:last-child{border-bottom:0;}
+    .client-ac-item:hover{background:#f7fbff;}
+    .client-ac-item b{color:var(--navy);}
+    .client-ac-item span{color:var(--muted);font-size:11px;}
+
+    /* ── LOGIN ─────────────────────────────── */
+    .login-screen{
+      min-height:100vh;display:grid;place-items:center;padding:20px;
+      background:radial-gradient(circle at 20% 15%,rgba(145,200,255,.3),transparent 28%),
+        radial-gradient(circle at 80% 80%,rgba(215,199,255,.32),transparent 30%),
+        linear-gradient(135deg,#071b33,#0b1f3a 55%,#102b50);
+    }
+    .login-card{
+      width:min(420px,100%);background:rgba(255,255,255,.97);
+      border-radius:28px;padding:32px;
+      box-shadow:0 30px 90px rgba(0,0,0,.28);
+    }
+    .login-card h1{color:var(--navy);font-weight:900;margin-bottom:4px;}
+    .login-card p{color:var(--muted);margin-bottom:22px;font-size:14px;}
+    .login-footer{margin-top:22px;font-size:11px;color:var(--muted);text-align:center;}
+
+    /* ── TABLE ─────────────────────────────── */
+    .table-soft{background:#fff;border-radius:var(--r);overflow:hidden;border:1px solid var(--line);box-shadow:var(--shadow);}
+    .table-soft table{margin:0;}
+    .table-soft th{color:var(--navy);background:#f7faff;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;}
+
+    /* ── SOLICITUDES ───────────────────────── */
+    .sol-card{
+      background:var(--card);border:1px solid var(--line);border-radius:16px;
+      padding:16px 18px;margin-bottom:12px;box-shadow:var(--shadow);
+      border-left:5px solid var(--accent);
+    }
+    .sol-card.Nueva      { border-left-color:#ffd6a5; }
+    .sol-card.Contactada { border-left-color:#91c8ff; }
+    .sol-card.Confirmada { border-left-color:#b8f7d4; }
+    .sol-card.Cancelada  { border-left-color:#ffb3c6; opacity:.75; }
+    .sol-estado {
+      display:inline-flex;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:800;
+    }
+    .sol-Nueva      { background:#ffd6a5;color:#92400e; }
+    .sol-Contactada { background:#91c8ff;color:#1e3a72; }
+    .sol-Confirmada { background:#b8f7d4;color:#065f46; }
+    .sol-Cancelada  { background:#ffb3c6;color:#9f1239; }
+    .sol-servicios-tag {
+      display:inline-block;background:#f0f7ff;color:#1e3a72;
+      border:1px solid #c7dcf5;border-radius:8px;padding:2px 8px;
+      font-size:11px;font-weight:600;margin:2px 2px 0 0;
+    }
+    .pago-metodo-row {
+      display:flex;align-items:center;gap:10px;padding:10px 14px;
+      background:#f8faff;border:1px solid var(--line);border-radius:12px;margin-bottom:8px;
+    }
+    .pago-metodo-icon { font-size:20px; flex-shrink:0; }
+    .pago-metodo-label { font-size:12px;color:var(--muted);font-weight:700; }
+    .pago-metodo-val { font-size:13px;font-weight:700;color:var(--navy);word-break:break-all; }
+
+    /* ── BOTTOM NAV (mobile) ────────────────── */
+    .bottom-nav{display:none;}
+
+    /* ── RESPONSIVE ────────────────────────── */
+    @media(max-width:980px){
+      #app{grid-template-columns:1fr;}
+      .sidebar{display:none;}
+      .main{padding:16px 14px 84px;}
+      .kpi-grid{grid-template-columns:repeat(2,1fr);}
+      .section-grid{grid-template-columns:1fr;}
+      .agenda-wrap{display:none;}
+      .mobile-list{display:block;}
+      .client-grid,.config-grid{grid-template-columns:1fr;}
+      .topbar{flex-direction:column;align-items:stretch;}
+      .search-box{min-width:0;width:100%;}
+      .bottom-nav{
+        display:grid;grid-template-columns:repeat(6,1fr);
+        position:fixed;bottom:0;left:0;right:0;
+        background:#fff;border-top:1px solid var(--line);z-index:50;padding:6px 4px;
+      }
+      .bottom-nav button{border:0;background:transparent;color:var(--muted);font-size:11px;font-weight:700;padding:7px 2px;cursor:pointer;}
+      .bottom-nav button.active{color:var(--navy);}
+      .fab{right:16px;bottom:80px;}
+    }
+    @media(max-width:520px){
+      .kpi-grid{grid-template-columns:1fr;}
+      .login-card{padding:24px 18px;}
+    }
+
+    .top-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+    .refresh-top{display:inline-flex;align-items:center;gap:7px;white-space:nowrap;}
+    .refresh-top:disabled{opacity:.6;cursor:wait;}
+    .nav-badge{margin-left:auto;background:#ef4444;color:#fff;font-size:10px;min-width:18px;height:18px;border-radius:999px;display:none;align-items:center;justify-content:center;padding:0 5px;}
+    .nav-badge.on{display:inline-flex;}
+    .alert-card{border-left:5px solid #f59e0b;}
+    .alert-card.today{border-left-color:#ef4444;}
+    .empty-state{padding:26px;text-align:center;color:var(--muted);}
+
+    .has-alerts{position:relative;}
+    .has-alerts::after{
+      content:'';position:absolute;right:8px;top:8px;width:8px;height:8px;border-radius:999px;
+      background:#ef4444;box-shadow:0 0 0 4px rgba(239,68,68,.18);
+    }
+
+  </style>
+</head>
+<body>
+
+<!-- ═══ LOGIN ════════════════════════════════════════ -->
+<div id="loginScreen" class="login-screen">
+  <div class="login-card">
+    <div class="brand mb-3">
+      <div class="brand-logo" id="loginLogo">ST</div>
+      <div>
+        <div class="brand-title text-dark" id="loginBrandName">Sistema de Turnos</div>
+        <div class="brand-sub text-muted" id="loginBrandSub">Agenda profesional</div>
+      </div>
+    </div>
+    <h1 id="loginTitle">Bienvenido</h1>
+    <p id="loginSubtitle">Ingresá para gestionar tu agenda.</p>
+    <form id="loginForm" autocomplete="off">
+      <div class="mb-3">
+        <label class="form-label">Email</label>
+        <input id="loginEmail" class="form-control" type="email" autocomplete="off" autocapitalize="none" required>
+      </div>
+      <div class="mb-4">
+        <label class="form-label">Contraseña</label>
+        <input id="loginPassword" class="form-control" type="password" autocomplete="new-password" required>
+      </div>
+      <button class="btn-navy w-100" id="loginBtn" type="submit" style="padding:11px;">Ingresar</button>
+    </form>
+    <div class="login-footer">Sistema de Gestión de Turnos PRO — Marca blanca</div>
+  </div>
+</div>
+
+<!-- ═══ APP ══════════════════════════════════════════ -->
+<div id="app" class="hidden">
+
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-logo" id="sideLogo">ST</div>
+      <div>
+        <div class="brand-title" id="brandName">Mi Empresa</div>
+        <div class="brand-sub" id="brandSub">Agenda Profesional</div>
+      </div>
+    </div>
+    <button class="nav-btn active" data-view="dashboard"><span class="nav-icon">🏠</span>Dashboard</button>
+    <button class="nav-btn" data-view="agenda"><span class="nav-icon">📅</span>Agenda</button>
+    <button class="nav-btn" data-view="clientes"><span class="nav-icon">👥</span>Clientes</button>
+    <button class="nav-btn" data-view="alertas"><span class="nav-icon">🔔</span>Alertas <span id="navAlertBadge" class="nav-badge">0</span></button>
+    <button class="nav-btn admin-only" data-view="profesionales"><span class="nav-icon">🧑‍💼</span>Profesionales</button>
+    <button class="nav-btn admin-only" data-view="solicitudes"><span class="nav-icon">🛒</span>Solicitudes</button>
+    <button class="nav-btn admin-only" data-view="config"><span class="nav-icon">⚙️</span>Configuración</button>
+    <button class="nav-btn admin-only" data-view="reportes"><span class="nav-icon">📊</span>Reportes</button>
+    <div class="sidebar-user">
+      <strong id="sideUserName">—</strong>
+      <div><span class="role-badge" id="sideUserRole">—</span></div>
+      <button class="btn-soft w-100 mt-3" onclick="logout()" style="font-size:13px;">Cerrar sesión</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div class="page-title">
+        <h1 id="viewTitle">Dashboard</h1>
+        <p id="viewSub">Resumen operativo del día.</p>
+      </div>
+      <div class="top-actions">
+        <button class="btn-navy refresh-top" id="refreshBtn" onclick="manualRefresh()">↻ Actualizar info</button>
+        <div class="search-wrap">
+          <div class="search-box">
+            <span>🔎</span>
+            <input id="globalSearch" placeholder="Buscar cliente..." autocomplete="off">
+          </div>
+          <div id="globalSearchDropdown" class="search-dropdown hidden"></div>
+        </div>
+      </div>
+    </div>
+
+    <section id="view-dashboard"></section>
+    <section id="view-agenda"   class="hidden"></section>
+    <section id="view-clientes" class="hidden"></section>
+    <section id="view-alertas" class="hidden"></section>
+    <section id="view-profesionales" class="hidden"></section>
+    <section id="view-solicitudes" class="hidden"></section>
+    <section id="view-config"   class="hidden"></section>
+    <section id="view-reportes" class="hidden"></section>
+  </main>
+
+  <button class="fab" onclick="openTurnoModal()" title="Nuevo turno">+</button>
+
+  <nav class="bottom-nav">
+    <button data-view="dashboard" class="active">🏠<br>Inicio</button>
+    <button data-view="agenda">📅<br>Agenda</button>
+    <button data-view="clientes">👥<br>Clientes</button>
+    <button data-view="alertas">🔔<br>Alertas</button>
+    <button class="admin-only" data-view="config">⚙️<br>Config</button>
+    <button onclick="logout()">↩<br>Salir</button>
+  </nav>
+</div>
+
+<div id="modalRoot"></div>
+<div id="toastRoot"></div>
+
+<script>
+// Pegá aquí la URL de la implementación de Apps Script terminada en /exec.
+const API_URL = 'PEGAR_AQUI_URL_APPS_SCRIPT_EXEC';
+
+/* ════════════════════════════════════════════════════
+   ESTADO GLOBAL
+════════════════════════════════════════════════════ */
+const App = {
+  session:      null,
+  view:         'dashboard',
+  selectedDate: new Date().toISOString().slice(0,10),
+  data: { usuarios:[], sucursales:[], servicios:[], clientes:[], disponibilidad:[], ajustes:[], turnos:[], solicitudes:[] },
+  etags: {},         // { nombreHoja: rowCount } para delta bootstrap
+  charts: {},
+  syncing: false,
+  syncTimer: null,
+  chartPromise: null,
+  _searchTimer: null,
+  _clientSearchTimer: null
+};
+
+const KEYS = {
+  session:   'GTURNOS_SESSION',
+  bootstrap: 'GTURNOS_BOOTSTRAP',
+  etags:     'GTURNOS_ETAGS'
+};
+
+const VIEW_META = {
+  dashboard:   ['Dashboard','Resumen operativo del día.'],
+  agenda:      ['Agenda inteligente','Turnos por profesional, sucursal y fecha.'],
+  clientes:    ['Clientes','Base de clientes e historial operativo.'],
+  alertas:     ['Alertas','Centro operativo: solicitudes nuevas, avisos, pagos y novedades críticas.'],
+  profesionales:['Profesionales','Alta, edición y estado de profesionales/staff.'],
+  solicitudes: ['Solicitudes del carrito','Pedidos recibidos desde el portal público.'],
+  config:      ['Configuración','Empresa, pagos, servicios, sucursales y horarios.'],
+  reportes:    ['Reportes','Indicadores de productividad y estados.']
+};
+
+/* ════════════════════════════════════════════════════
+   INIT
+════════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', () => {
+  // Intentar restaurar ajustes de marca del localStorage (para login screen)
+  const cached = localStorage.getItem(KEYS.bootstrap);
+  if (cached) {
+    try {
+      App.data = JSON.parse(cached);
+      App.etags = JSON.parse(localStorage.getItem(KEYS.etags)||'{}');
+      applyAjustes(true); // solo login screen
+    } catch(e){}
+  }
+
+  bindLogin();
+  bindNav();
+  bindGlobalSearch();
+
+  const saved = localStorage.getItem(KEYS.session);
+  if (saved) {
+    try {
+      App.session = JSON.parse(saved);
+      startApp();
+    } catch(e){ localStorage.removeItem(KEYS.session); }
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && App.session) revalidate(true);
+    scheduleSync();
+  });
+});
+
+/* ════════════════════════════════════════════════════
+   LOGIN
+════════════════════════════════════════════════════ */
+function bindLogin() {
+  document.getElementById('loginForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const btn = document.getElementById('loginBtn');
+    btn.textContent = 'Ingresando...'; btn.disabled = true;
+
+    gsRun('apiLogin',
+      [document.getElementById('loginEmail').value.trim(),
+       document.getElementById('loginPassword').value],
+      res => {
+        btn.textContent = getSetting('Texto_Login_Boton')||'Ingresar'; btn.disabled = false;
+        if (!res.ok) return toast(res.message||'Error al iniciar sesión.','error');
+        App.session = res.data;
+        localStorage.setItem(KEYS.session, JSON.stringify(App.session));
+        startApp();
+      },
+      err => { btn.textContent = 'Ingresar'; btn.disabled = false; toast(err.message,'error'); }
+    );
+  });
+}
+
+function startApp() {
+  el('loginScreen').classList.add('hidden');
+  el('app').classList.remove('hidden');
+  el('sideUserName').textContent = App.session.nombre;
+  el('sideUserRole').textContent = App.session.rol;
+  applyVisualPerms();
+  renderView(App.view);            // render inmediato desde caché
+  updateAlertBadge();
+  revalidate(true);                // revalidación silenciosa en background
+  scheduleSync();
+}
+
+/* ════════════════════════════════════════════════════
+   BOOTSTRAP DELTA
+════════════════════════════════════════════════════ */
+function revalidate(silent) {
+  if (App.syncing || !App.session) return;
+  App.syncing = true;
+  const rb = el('refreshBtn');
+  if (rb) { rb.disabled = true; rb.textContent = silent ? '↻ Actualizando...' : '↻ Actualizando info...'; }
+  if (!silent) toast('Actualizando info...');
+  gsRun('apiGetBootstrap', [App.session, App.etags], res => {
+    App.syncing = false;
+    if (rb) { rb.disabled = false; rb.textContent = '↻ Actualizar info'; }
+    if (!res.ok) return silent ? null : toast(res.message,'error');
+
+    let changed = false;
+    for (const [key, val] of Object.entries(res.data)) {
+      if (val === null) continue; // sin cambios para esta hoja
+      App.data[key]  = val.data;
+      App.etags[key] = val.rowCount;
+      changed = true;
+    }
+
+    if (changed) {
+      localStorage.setItem(KEYS.bootstrap, JSON.stringify(App.data));
+      localStorage.setItem(KEYS.etags, JSON.stringify(App.etags));
+      applyAjustes(false);
+      renderView(App.view); // re-render solo la vista activa
+    }
+    updateAlertBadge();
+    if (!silent) toast(changed ? 'Info actualizada.' : 'Info ya estaba al día.');
+  }, err => {
+    App.syncing = false;
+    if (rb) { rb.disabled = false; rb.textContent = '↻ Actualizar info'; }
+    return silent ? null : toast(err.message,'error');
+  });
+}
+
+function scheduleSync(){
+  clearInterval(App.syncTimer);
+  if (!App.session) return;
+  const interval = document.hidden ? 45000 : 7000;
+  App.syncTimer = setInterval(()=>revalidate(true), interval);
+}
+
+function manualRefresh(){
+  if (!App.session) return;
+  revalidate(false);
+}
+
+/* ════════════════════════════════════════════════════
+   NAVEGACIÓN
+════════════════════════════════════════════════════ */
+function bindNav() {
+  document.querySelectorAll('[data-view]').forEach(btn => {
+    btn.addEventListener('click', () => switchView(btn.dataset.view));
+  });
+}
+
+function switchView(view) {
+  if (!App.session) return;
+  if ((view==='config'||view==='reportes'||view==='profesionales') && App.session.rol!=='Admin') return;
+  App.view = view;
+
+  document.querySelectorAll('main section').forEach(s => s.classList.add('hidden'));
+  el('view-'+view).classList.remove('hidden');
+  document.querySelectorAll('[data-view]').forEach(b => b.classList.toggle('active', b.dataset.view===view));
+
+  const [title, sub] = VIEW_META[view]||[view,''];
+  el('viewTitle').textContent = title;
+  el('viewSub').textContent = sub;
+
+  renderView(view);
+}
+
+function renderView(view) {
+  if (!App.session) return;
+  if (view==='dashboard')   renderDashboard();
+  else if (view==='agenda')      renderAgenda();
+  else if (view==='clientes')    renderClientes();
+  else if (view==='alertas')     renderAlertas();
+  else if (view==='profesionales') renderProfesionales();
+  else if (view==='solicitudes') renderSolicitudes();
+  else if (view==='config')      renderConfig();
+  else if (view==='reportes')  { renderReportes(); setTimeout(renderCharts,60); }
+}
+
+/* ════════════════════════════════════════════════════
+   HELPERS
+════════════════════════════════════════════════════ */
+function el(id){ return document.getElementById(id); }
+
+function gsRun(fn, args, onSuccess, onError) {
+  const fail = onError || (e => toast(e.message||String(e),'error'));
+  if (!API_URL || API_URL.includes('PEGAR_AQUI')) {
+    fail(new Error('Falta configurar API_URL en index.html'));
+    return;
+  }
+  fetch(API_URL, {
+    method:'POST',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body:JSON.stringify({action:fn,args:args||[]})
+  })
+    .then(r=>r.ok?r.json():Promise.reject(new Error('Error HTTP '+r.status)))
+    .then(onSuccess)
+    .catch(fail);
+}
+
+function getSetting(key) {
+  const row = App.data.ajustes.find(a => a.clave===key);
+  return row ? row.valor : '';
+}
+
+function byId(list, id) { return list.find(x=>x.id===id)||{}; }
+function moneda()       { return getSetting('Moneda')||'$'; }
+
+function profesionales() {
+  return App.data.usuarios.filter(u=>u.rol==='Staff'&&u.estado==='Activo');
+}
+
+function visibleTurnos() {
+  if (App.session?.rol==='Staff')
+    return App.data.turnos.filter(t=>t.profesional_id===App.session.id);
+  return App.data.turnos;
+}
+
+function formatMoney(n) {
+  return moneda()+' '+Number(n||0).toLocaleString('es-AR');
+}
+
+function eh(s){ // escapeHtml
+  return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+}
+
+function debounce(fn, ms) {
+  let t;
+  return (...args) => { clearTimeout(t); t = setTimeout(()=>fn(...args), ms); };
+}
+
+function applyVisualPerms() {
+  const isAdmin = App.session?.rol==='Admin';
+  document.querySelectorAll('.admin-only').forEach(e => e.style.display = isAdmin?'':'none');
+}
+
+/* ════════════════════════════════════════════════════
+   AJUSTES / MARCA BLANCA
+════════════════════════════════════════════════════ */
+function applyAjustes(loginOnly) {
+  const g = key => getSetting(key);
+
+  // CSS variables
+  if (!loginOnly) {
+    const vars = {
+      '--navy':  g('Color_Primario')||'#0b1f3a',
+      '--navy2': g('Color_Secundario')||'#102b50',
+      '--accent':g('Color_Acento')||'#91c8ff',
+      '--bg':    g('Color_Fondo')||'#f4f7fb',
+      '--card':  g('Color_Tarjeta')||'#ffffff',
+      '--text':  g('Color_Texto')||'#172033',
+      '--muted': g('Color_Suave')||'#64748b'
+    };
+    Object.entries(vars).forEach(([k,v])=>document.documentElement.style.setProperty(k,v));
+  }
+
+  const empresa  = g('Nombre_Empresa')||'Mi Empresa';
+  const sistema  = g('Nombre_Sistema')||'Sistema de Turnos';
+  const iniciales= g('Iniciales_Marca')||'ST';
+  const logo     = g('Logo_URL')||'';
+  const fondo    = g('Fondo_Login_URL')||'';
+
+  document.title = sistema;
+
+  const logoHtml = logo
+    ? `<img src="${eh(logo)}" style="width:100%;height:100%;object-fit:cover;border-radius:12px;">`
+    : iniciales;
+
+  setIfExists('loginLogo', el => el.innerHTML = logoHtml);
+  setIfExists('loginBrandName', el => el.textContent = empresa);
+  setIfExists('loginBrandSub',  el => el.textContent = sistema);
+  setIfExists('loginTitle',     el => el.textContent = g('Texto_Login_Titulo')||'Bienvenido');
+  setIfExists('loginSubtitle',  el => el.textContent = g('Texto_Login_Subtitulo')||'Ingresá para gestionar tus turnos.');
+  setIfExists('loginBtn',       el => el.textContent = g('Texto_Login_Boton')||'Ingresar');
+
+  if (fondo) {
+    el('loginScreen').style.background = `linear-gradient(rgba(11,31,58,.7),rgba(11,31,58,.75)),url('${fondo}') center/cover`;
+  }
+
+  if (!loginOnly) {
+    setIfExists('sideLogo',   el => el.innerHTML = logoHtml);
+    setIfExists('brandName',  el => el.textContent = empresa);
+    setIfExists('brandSub',   el => el.textContent = sistema);
+  }
+}
+
+function setIfExists(id, fn) { const e = el(id); if (e) fn(e); }
+
+/* ════════════════════════════════════════════════════
+   TOAST & MODAL
+════════════════════════════════════════════════════ */
+function toast(msg, type='ok') {
+  const div = document.createElement('div');
+  div.className = 'toastx';
+  div.style.borderLeftColor = type==='error'?'#ff8fa3':'var(--accent)';
+  div.textContent = (type==='error'?'❌ ':'✅ ') + msg;
+  el('toastRoot').appendChild(div);
+  setTimeout(()=>div.remove(), 3400);
+}
+
+function openModal(title, bodyHtml) {
+  el('modalRoot').innerHTML = `
+    <div class="modalx-backdrop" id="modalBackdrop" onclick="handleBackdropClick(event)">
+      <div class="modalx">
+        <div class="modalx-header">
+          <h3>${title}</h3>
+          <button class="modalx-close" onclick="closeModal()">×</button>
+        </div>
+        <div class="modalx-body">${bodyHtml}</div>
+      </div>
+    </div>`;
+}
+
+function handleBackdropClick(e) {
+  if (e.target.id==='modalBackdrop') closeModal();
+}
+
+function closeModal() { el('modalRoot').innerHTML=''; }
+
+function confirmX(msg, onOk) {
+  openModal('Confirmar', `
+    <p style="color:var(--muted);font-size:14px;">${eh(msg)}</p>
+    <div class="d-flex justify-content-end gap-2 mt-4">
+      <button class="btn-soft" onclick="closeModal()">Cancelar</button>
+      <button class="btn-navy" id="confOk">Confirmar</button>
+    </div>`);
+  el('confOk').onclick = ()=>{ closeModal(); onOk(); };
+}
+
+/* ════════════════════════════════════════════════════
+   BÚSQUEDA GLOBAL (con debounce + dropdown)
+════════════════════════════════════════════════════ */
+function bindGlobalSearch() {
+  const inp = el('globalSearch');
+  const dd  = el('globalSearchDropdown');
+
+  inp.addEventListener('input', debounce(()=>{
+    const q = inp.value.trim().toLowerCase();
+    if (!q) { dd.classList.add('hidden'); dd.innerHTML=''; return; }
+
+    const res = App.data.clientes.filter(c=>
+      c.nombre?.toLowerCase().includes(q)||
+      c.dni_cuit?.includes(q)||
+      c.telefono?.includes(q)||
+      c.email?.toLowerCase().includes(q)
+    ).slice(0,8);
+
+    if (!res.length) { dd.classList.add('hidden'); return; }
+
+    dd.innerHTML = res.map(c=>`
+      <div class="search-dropdown-item" onclick="clienteQuickAction('${c.id}')">
+        <strong>${eh(c.nombre)}</strong>
+        <span>${eh(c.telefono||'')} · ${eh(c.dni_cuit||'')}</span>
+      </div>`).join('');
+    dd.classList.remove('hidden');
+  }, 280));
+
+  document.addEventListener('click', e=>{
+    if (!inp.contains(e.target)&&!dd.contains(e.target)) dd.classList.add('hidden');
+  });
+}
+
+function clienteQuickAction(id) {
+  el('globalSearchDropdown').classList.add('hidden');
+  el('globalSearch').value = '';
+  const c = byId(App.data.clientes, id);
+  openClienteModal(id);
+}
+
+/* ════════════════════════════════════════════════════
+   FECHA
+════════════════════════════════════════════════════ */
+function changeDate(delta) {
+  const d = new Date(App.selectedDate+'T12:00:00');
+  d.setDate(d.getDate()+delta);
+  App.selectedDate = d.toISOString().slice(0,10);
+  if (App.view==='dashboard') renderDashboard();
+  else if (App.view==='agenda') renderAgenda();
+}
+
+function setDate(val) {
+  App.selectedDate = val;
+  if (App.view==='dashboard') renderDashboard();
+  else if (App.view==='agenda') renderAgenda();
+}
+
+/* ════════════════════════════════════════════════════
+   DASHBOARD
+════════════════════════════════════════════════════ */
+function renderDashboard() {
+  const root = el('view-dashboard');
+  const date = App.selectedDate;
+  const hoy  = visibleTurnos().filter(t=>t.fecha===date).sort((a,b)=>a.hora_inicio.localeCompare(b.hora_inicio));
+  const activos  = hoy.filter(t=>t.estado!=='Cancelado');
+  const proximos = activos.slice(0,5);
+
+  const recaudado   = hoy.filter(t=>(t.pago_estado==='Pagado'||t.estado==='Realizado'))
+    .reduce((s,t)=>s+Number(byId(App.data.servicios,t.servicio_id).precio||0),0);
+  const totalPagoEnv= (App.data.turnos||[]).filter(t=>['Link enviado','Enviado'].includes(t.pago_estado||'')).length;
+  const nuevasSolicitudes = (App.data.solicitudes||[]).filter(s=>s.estado==='Nueva').length;
+  const alertasN = alertasPendientes().length;
+
+  const canNew = ['Admin','Recepcionista'].includes(App.session.rol);
+
+  root.innerHTML = `
+    <div class="kpi-grid">
+      <div class="kpi card-soft"><div class="kpi-icon">📅</div><small>Turnos hoy</small><strong>${hoy.length}</strong></div>
+      <div class="kpi card-soft"><div class="kpi-icon">💰</div><small>Recaudado est.</small><strong style="font-size:20px;">${formatMoney(recaudado)}</strong></div>
+      <div class="kpi card-soft" style="border-left:3px solid ${nuevasSolicitudes?'#f59e0b':'#818cf8'};cursor:pointer;" onclick="switchView('solicitudes')">
+        <div class="kpi-icon">🛒</div><small>Solicitudes nuevas</small>
+        <strong style="color:${nuevasSolicitudes?'#b45309':'#3730a3'};">${nuevasSolicitudes}</strong>
+        ${nuevasSolicitudes>0?'<div style="font-size:11px;color:#b45309;margin-top:2px;">Revisar ahora</div>':''}
+      </div>
+      <div class="kpi card-soft" style="border-left:3px solid ${alertasN?'#ef4444':'#b8f7d4'};cursor:pointer;" onclick="switchView('alertas')">
+        <div class="kpi-icon">🔔</div><small>Alertas activas</small>
+        <strong style="color:${alertasN?'#b91c1c':'#065f46'};">${alertasN}</strong>
+        ${alertasN>0?'<div style="font-size:11px;color:#b91c1c;margin-top:2px;">Ver novedades</div>':'<div style="font-size:11px;color:#065f46;margin-top:2px;">Todo al día</div>'}
+      </div>
+    </div>
+
+    ${alertasN>0 ? `
+      <div class="panel card-soft mb-3" style="border-left:5px solid #ef4444;">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <div>
+            <h3 style="margin:0;color:var(--navy);">🔔 Hay novedades importantes</h3>
+            <p style="font-size:13px;color:var(--muted);margin:4px 0 0;">Tenés ${alertasN} alerta${alertasN>1?'s':''}: solicitudes, pagos, turnos próximos o temas de configuración.</p>
+          </div>
+          <button class="btn-navy" onclick="switchView('alertas')">Ver Alertas</button>
+        </div>
+      </div>` : ''}
+
+    <div class="section-grid">
+      <div class="panel card-soft">
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+          <h3 style="margin:0;">Próximos turnos</h3>
+          <div class="date-nav">
+            <button class="btn-soft" onclick="changeDate(-1)">‹</button>
+            <input type="date" value="${date}" onchange="setDate(this.value)">
+            <button class="btn-soft" onclick="changeDate(1)">›</button>
+          </div>
+        </div>
+        ${proximos.length ? proximos.map(turnoMiniHTML).join('') : `<p style="color:var(--muted);font-size:13px;">No hay turnos para esta fecha.</p>`}
+      </div>
+
+      <div class="panel card-soft">
+        <h3>Acciones rápidas</h3>
+        <div class="d-grid gap-2">
+          <button class="btn-navy" onclick="openTurnoModal()">+ Nuevo turno</button>
+          ${canNew?`<button class="btn-soft" onclick="openClienteModal()">+ Nuevo cliente</button>`:''}
+          <button class="btn-soft" onclick="switchView('alertas')">🔔 Ver alertas</button>
+          <button class="btn-soft" onclick="switchView('agenda')">Ver agenda completa</button>
+          <button class="btn-soft" onclick="manualRefresh()">↻ Actualizar info</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function turnoMiniHTML(t) {
+  const c = byId(App.data.clientes,  t.cliente_id);
+  const s = byId(App.data.servicios, t.servicio_id);
+  const p = byId(App.data.usuarios,  t.profesional_id);
+  return `
+    <div class="turno-mini" onclick="openTurnoModal('${t.id}')">
+      <div class="time-pill">${eh(t.hora_inicio)}</div>
+      <div>
+        <strong style="font-size:14px;">${eh(c.nombre||'Cliente')}</strong>
+        <div style="font-size:12px;color:var(--muted);">${eh(s.nombre||'')} · ${eh(p.nombre||'')}</div>
+      </div>
+      <span class="status st-${t.estado.replace(/ /g,'')}">${eh(t.estado)}</span>
+    </div>`;
+}
+
+/* ════════════════════════════════════════════════════
+   AGENDA
+════════════════════════════════════════════════════ */
+function renderAgenda() {
+  const root  = el('view-agenda');
+  const date  = App.selectedDate;
+  const profs = profsForSession();
+
+  const filterSuc = root._filterSuc || '';
+
+  const turnosDia = visibleTurnos()
+    .filter(t => t.fecha===date && (!filterSuc||t.sucursal_id===filterSuc))
+    .sort((a,b)=>a.hora_inicio.localeCompare(b.hora_inicio));
+
+  const profsFiltered = filterSuc
+    ? profs.filter(p=>p.sucursal_id===filterSuc)
+    : profs;
+
+  const hours = [];
+  for (let h=8;h<=19;h++) hours.push(String(h).padStart(2,'0')+':00');
+
+  const sucOpts = App.data.sucursales.map(s=>`<option value="${s.id}"${s.id===filterSuc?' selected':''}>${eh(s.nombre)}</option>`).join('');
+
+  root.innerHTML = `
+    <div class="agenda-toolbar">
+      <div class="date-nav">
+        <button class="btn-soft" onclick="changeDate(-1)">‹</button>
+        <input type="date" value="${date}" onchange="setDate(this.value)">
+        <button class="btn-soft" onclick="changeDate(1)">›</button>
+      </div>
+      <div class="d-flex gap-2 align-items-center flex-wrap">
+        <select class="form-select" style="width:170px;" id="agendaSucFilter" onchange="agendaFilterSuc(this.value)">
+          <option value="">Todas las sucursales</option>${sucOpts}
+        </select>
+        <button class="btn-navy" onclick="openTurnoModal()">+ Nuevo turno</button>
+      </div>
+    </div>
+
+    <!-- PC grid -->
+    <div class="agenda-wrap card-soft">
+      <div class="agenda-grid" style="grid-template-columns:70px repeat(${profsFiltered.length},minmax(180px,1fr));">
+        <div class="ag-head" style="border-radius:${profsFiltered.length?'':'var(--r)'} 0 0 0;">Hora</div>
+        ${profsFiltered.map(p=>{
+          const suc=byId(App.data.sucursales,p.sucursal_id);
+          return `<div class="ag-head"><div style="font-size:13px;">${eh(p.nombre)}</div><div style="font-size:11px;opacity:.65;">${eh(suc.nombre||'')}</div></div>`;
+        }).join('')}
+        ${hours.map(hr => `
+          <div class="ag-hour">${hr}</div>
+          ${profsFiltered.map(p=>{
+            const ct = turnosDia.filter(t=>t.profesional_id===p.id&&t.hora_inicio.slice(0,2)===hr.slice(0,2));
+            return `<div class="ag-cell">${ct.map(apptHTML).join('')}</div>`;
+          }).join('')}
+        `).join('')}
+      </div>
+    </div>
+
+    <!-- Mobile list -->
+    <div class="mobile-list">
+      ${turnosDia.length
+        ? turnosDia.map(turnoMiniHTML).join('')
+        : `<div class="panel card-soft" style="text-align:center;color:var(--muted);">Sin turnos para esta fecha.</div>`}
+    </div>`;
+
+  root._filterSuc = filterSuc; // preservar estado
+}
+
+function agendaFilterSuc(val) {
+  const root = el('view-agenda');
+  root._filterSuc = val;
+  renderAgenda();
+}
+
+function profsForSession() {
+  const all = profesionales();
+  return App.session.rol==='Staff' ? all.filter(p=>p.id===App.session.id) : all;
+}
+
+function apptHTML(t) {
+  const c=byId(App.data.clientes,t.cliente_id);
+  const s=byId(App.data.servicios,t.servicio_id);
+  const color=s.color_hex||'#91c8ff';
+  return `<div class="appt" style="background:${eh(color)}22;border-left:3px solid ${eh(color)};" onclick="openTurnoModal('${t.id}')">
+    <strong>${eh(t.hora_inicio)} ${eh(c.nombre||'')}</strong>
+    <div style="font-size:11px;color:var(--muted);">${eh(s.nombre||'')}</div>
+    <span class="status st-${t.estado.replace(/ /g,'')}" style="margin-top:3px;">${eh(t.estado)}</span>
+  </div>`;
+}
+
+/* ════════════════════════════════════════════════════
+   TURNOS — MODAL (con autocomplete de cliente)
+════════════════════════════════════════════════════ */
+function openTurnoModal(id='') {
+  const t = id ? byId(App.data.turnos,id) : {fecha:App.selectedDate,estado:'Pendiente'};
+  const canDel = id && App.session.rol==='Admin';
+  const profsOpts = profsForSelect().map(p=>`<option value="${p.id}"${p.id===t.profesional_id?' selected':''}>${eh(p.nombre)}</option>`).join('');
+  const sucOpts   = App.data.sucursales.map(s=>`<option value="${s.id}"${s.id===t.sucursal_id?' selected':''}>${eh(s.nombre)}</option>`).join('');
+  const svcOpts   = App.data.servicios.map(s=>`<option value="${s.id}"${s.id===t.servicio_id?' selected':''}>${eh(s.nombre)} · ${s.duracion_min}min · ${formatMoney(s.precio)}</option>`).join('');
+  const estados   = ['Pendiente','Confirmado','Realizado','Cancelado','Reprogramado','Ausente'];
+
+  // Cliente: si tiene id mostramos su nombre en el campo
+  const clienteNombre = t.cliente_id ? (byId(App.data.clientes,t.cliente_id).nombre||'') : '';
+
+  openModal(id?'Detalle del turno':'Nuevo turno', `
+    <form id="turnoForm">
+      <input type="hidden" name="id" value="${eh(t.id||'')}">
+      <input type="hidden" name="cliente_id" id="tClienteId" value="${eh(t.cliente_id||'')}">
+
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label">Fecha</label>
+          <input class="form-control" type="date" name="fecha" value="${eh(t.fecha||App.selectedDate)}" required>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Hora inicio</label>
+          <input class="form-control" type="time" name="hora_inicio" id="tHoraInicio" value="${eh(t.hora_inicio||'08:00')}" required>
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label">Servicio</label>
+          <select class="form-select" name="servicio_id" id="tServicio" required onchange="previewHoraFin()">
+            <option value="">Seleccionar...</option>${svcOpts}
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Hora fin estimada</label>
+          <input class="form-control" name="hora_fin" id="tHoraFin" value="${eh(t.hora_fin||'')}" readonly>
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label">Cliente</label>
+          <div class="client-ac-wrap">
+            <input class="form-control" type="text" id="tClienteSearch" placeholder="Buscar por nombre, DNI..." autocomplete="off"
+              value="${eh(clienteNombre)}" oninput="clienteAcInput(this.value)">
+            <div id="clienteAcList" class="client-ac-list hidden"></div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Profesional</label>
+          <select class="form-select" name="profesional_id" required>
+            <option value="">Seleccionar...</option>${profsOpts}
+          </select>
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label">Sucursal</label>
+          <select class="form-select" name="sucursal_id" required>
+            <option value="">Seleccionar...</option>${sucOpts}
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Estado</label>
+          <select class="form-select" name="estado">
+            ${estados.map(s=>`<option${s===t.estado?' selected':''}>${s}</option>`).join('')}
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Estado de pago</label>
+          <input class="form-control" name="pago_estado" value="${eh(t.pago_estado||'Sin pago')}" readonly>
+        </div>
+
+        <div class="col-12">
+          <label class="form-label">Nota</label>
+          <textarea class="form-control" name="nota" rows="2">${eh(t.nota||'')}</textarea>
+        </div>
+      </div>
+
+      <div class="d-flex flex-wrap justify-content-between gap-2 mt-4">
+        <div class="d-flex gap-2 flex-wrap">
+          ${id?`<button type="button" class="btn-soft" onclick="openWhatsApp('${t.id}')">📲 WhatsApp</button>`:''}
+          ${id?`<button type="button" class="btn-soft" onclick="sendPago('${t.id}')">💳 Enviar pago</button>`:''}
+          ${id&&['Link enviado','Enviado','Seña pagada'].includes(t.pago_estado||'')?`<button type="button" class="btn-soft" style="background:#d1fae5;color:#065f46;border-color:#6ee7b7;" onclick="marcarPagado('${t.id}')">✅ Marcar pagado</button>`:''}
+          ${id?`<button type="button" class="btn-soft" onclick="sendMail('${t.id}')">✉️ Email</button>`:''}
+          ${id?`<button type="button" class="btn-soft" onclick="cambiarEstadoRapido('${t.id}','Realizado')">☑️ Realizado</button>`:''}
+        </div>
+        <div class="d-flex gap-2">
+          <button type="button" class="btn-soft" onclick="closeModal()">Cerrar</button>
+          ${canDel?`<button type="button" class="btn-danger" onclick="deleteTurno('${t.id}')">🗑 Eliminar</button>`:''}
+          <button type="submit" class="btn-navy">💾 Guardar</button>
+        </div>
+      </div>
+    </form>`);
+
+  // Ajustar hora fin si servicio ya seleccionado
+  el('tHoraInicio').addEventListener('change', previewHoraFin);
+  previewHoraFin();
+
+  el('turnoForm').onsubmit = e => {
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(e.target).entries());
+    // Agregar cliente_id del hidden
+    data.cliente_id = el('tClienteId').value;
+    if (!data.cliente_id) { toast('Seleccioná un cliente.','error'); return; }
+    saveTurno(data);
+  };
+}
+
+/* Autocomplete de cliente en modal */
+function clienteAcInput(q) {
+  const acList = el('clienteAcList');
+  if (!acList) return;
+  if (!q || q.length < 2) { acList.classList.add('hidden'); return; }
+
+  const res = App.data.clientes.filter(c=>
+    c.nombre?.toLowerCase().includes(q.toLowerCase())||
+    c.dni_cuit?.includes(q)||
+    c.telefono?.includes(q)
+  ).slice(0,7);
+
+  if (!res.length) { acList.classList.add('hidden'); return; }
+
+  acList.innerHTML = res.map(c=>`
+    <div class="client-ac-item" onclick="selectClienteAc('${c.id}','${eh(c.nombre)}')">
+      <b>${eh(c.nombre)}</b>
+      <span>${eh(c.telefono||'')} · ${eh(c.dni_cuit||'')}</span>
+    </div>`).join('');
+  acList.classList.remove('hidden');
+}
+
+function selectClienteAc(id, nombre) {
+  el('tClienteId').value     = id;
+  el('tClienteSearch').value = nombre;
+  el('clienteAcList').classList.add('hidden');
+}
+
+function previewHoraFin() {
+  const svcId = el('tServicio')?.value;
+  const hora  = el('tHoraInicio')?.value;
+  const fin   = el('tHoraFin');
+  if (!svcId || !hora || !fin) return;
+  const s = byId(App.data.servicios, svcId);
+  if (!s.duracion_min) return;
+  const [h,m] = hora.split(':').map(Number);
+  const tot = h*60+m+Number(s.duracion_min);
+  fin.value = String(Math.floor(tot/60)).padStart(2,'0')+':'+String(tot%60).padStart(2,'0');
+}
+
+function profsForSelect() {
+  return App.session.rol==='Staff'
+    ? profesionales().filter(p=>p.id===App.session.id)
+    : profesionales();
+}
+
+function saveTurno(obj) {
+  if (App.session.rol==='Staff') obj.profesional_id = App.session.id;
+  gsRun('apiSaveTurno', [obj, App.session], res => {
+    if (!res.ok) return toast(res.message,'error');
+    closeModal();
+    toast('Turno guardado.');
+    // Optimistic update local
+    const idx = App.data.turnos.findIndex(t=>t.id===res.data.id);
+    if (idx>=0) App.data.turnos[idx]=res.data;
+    else App.data.turnos.push(res.data);
+    renderView(App.view);
+    revalidate(true); // sync silencioso
+  });
+}
+
+function cambiarEstadoRapido(id, estado) {
+  gsRun('apiChangeTurnoEstado',[id,estado,App.session], res=>{
+    if (!res.ok) return toast(res.message,'error');
+    closeModal(); toast('Estado actualizado.');
+    // Optimistic
+    const idx = App.data.turnos.findIndex(t=>t.id===id);
+    if (idx>=0) App.data.turnos[idx].estado = estado;
+    renderView(App.view);
+    revalidate(true);
+  });
+}
+
+function deleteTurno(id) {
+  confirmX('¿Eliminar este turno? Esta acción no se puede deshacer.',()=>{
+    gsRun('apiDeleteTurno',[id,App.session],res=>{
+      if (!res.ok) return toast(res.message,'error');
+      closeModal(); toast('Turno eliminado.');
+      App.data.turnos = App.data.turnos.filter(t=>t.id!==id);
+      renderView(App.view);
+      revalidate(true);
+    });
+  });
+}
+
+function openWhatsApp(id) {
+  gsRun('apiBuildWhatsAppLink',[id,App.session],res=>{
+    if (!res.ok) return toast(res.message,'error');
+    window.open(res.data,'_blank');
+  });
+}
+
+function sendPago(id) {
+  // Verificar que haya métodos de pago configurados antes de llamar al servidor
+  const hasPago = getSetting('Pago_CBU')||getSetting('Pago_Alias')||getSetting('Pago_MP')||getSetting('Pago_Otro_Link');
+  if (!hasPago) {
+    toast('Configurá al menos un método de pago en ⚙️ Configuración → Pagos.','error');
+    return;
+  }
+  confirmX('¿Enviar detalle de pago al cliente por WhatsApp? Se marcará el pago como "Link enviado" sin cambiar el estado del turno.',()=>{
+    gsRun('apiBuildPagoClienteLink',[id,App.session], res=>{
+      if (!res.ok) return toast(res.message,'error');
+      // Optimistic update
+      const idx=App.data.turnos.findIndex(t=>t.id===id);
+      if (idx>=0) App.data.turnos[idx].pago_estado='Link enviado';
+      closeModal();
+      window.open(res.data,'_blank');
+      toast('Detalle de pago generado. Pago → Link enviado.');
+      renderView(App.view); revalidate(true);
+    });
+  });
+}
+
+function marcarPagado(id) {
+  confirmX('¿Confirmar que el pago fue recibido? El turno pasará a "Pagado".',()=>{
+    gsRun('apiMarcarPagado',[id,App.session],res=>{
+      if (!res.ok) return toast(res.message,'error');
+      const idx=App.data.turnos.findIndex(t=>t.id===id);
+      if (idx>=0) App.data.turnos[idx].pago_estado='Pagado';
+      closeModal(); toast('Pago marcado como recibido ✅');
+      renderView(App.view); revalidate(true);
+    });
+  });
+}
+
+function enviarRecordatorio(clienteId) {
+  gsRun('apiEnviarRecordatorioWA',[clienteId,App.session],res=>{
+    if (!res.ok) return toast(res.message,'error');
+    window.open(res.data.waLink,'_blank');
+    toast('WhatsApp abierto con el recordatorio.');
+  });
+}
+
+function sendMail(id) {
+  confirmX('¿Enviar recordatorio por email al cliente?',()=>{
+    gsRun('apiSendReminderEmail',[id,App.session],res=>{
+      if (!res.ok) return toast(res.message,'error');
+      toast('Email enviado.');
+    });
+  });
+}
+
+/* ════════════════════════════════════════════════════
+   CLIENTES
+════════════════════════════════════════════════════ */
+function renderClientes(filter='') {
+  const root = el('view-clientes');
+  const canEdit = ['Admin','Recepcionista'].includes(App.session.rol);
+
+  let list = App.data.clientes;
+  if (filter) {
+    const q = filter.toLowerCase();
+    list = list.filter(c=>
+      c.nombre?.toLowerCase().includes(q)||
+      c.dni_cuit?.includes(q)||
+      c.telefono?.includes(q)||
+      c.email?.toLowerCase().includes(q)
+    );
+  }
+
+  root.innerHTML = `
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+      <div class="search-box" style="flex:1;max-width:340px;">
+        <span>🔎</span>
+        <input id="clientSearch" placeholder="Buscar por nombre, DNI, teléfono..." value="${eh(filter)}"
+          oninput="clientSearchInput(this.value)">
+      </div>
+      ${canEdit?`<button class="btn-navy" onclick="openClienteModal()">+ Nuevo cliente</button>`:''}
+    </div>
+
+    <div class="client-grid">
+      ${list.length ? list.map(c=>`
+        <div class="client-card card-soft">
+          <h4>${eh(c.nombre)}</h4>
+          <div style="font-size:12px;color:var(--muted);">DNI: ${eh(c.dni_cuit||'—')}</div>
+          <div style="margin-top:6px;font-size:13px;">📞 ${eh(c.telefono||'—')}</div>
+          <div style="font-size:13px;">✉️ ${eh(c.email||'—')}</div>
+          ${c.notas_historial?`<p style="font-size:12px;color:var(--muted);margin-top:6px;">${eh(c.notas_historial)}</p>`:''}
+          <div class="d-flex gap-2 mt-3">
+            ${canEdit?`<button class="btn-soft" onclick="openClienteModal('${c.id}')">✏️ Editar</button>`:''}
+            <button class="btn-soft" onclick="openTurnoConCliente('${c.id}')">+ Turno</button>
+            <button class="btn-soft" style="background:#f0fdf4;color:#065f46;border-color:#6ee7b7;" onclick="enviarRecordatorio('${c.id}')">📲 Recordar</button>
+          </div>
+        </div>`).join('')
+        : `<div style="grid-column:1/-1;text-align:center;color:var(--muted);padding:32px;">Sin resultados.</div>`}
+    </div>`;
+}
+
+const clientSearchInput = debounce(q=>renderClientes(q), 280);
+
+function openClienteModal(id='') {
+  if (!['Admin','Recepcionista'].includes(App.session.rol)) return toast('Sin permisos.','error');
+  const c = id ? byId(App.data.clientes,id) : {};
+  openModal(id?'Editar cliente':'Nuevo cliente',`
+    <form id="clienteForm">
+      <input type="hidden" name="id" value="${eh(c.id||'')}">
+      <div class="row g-3">
+        <div class="col-md-6"><label class="form-label">Nombre</label><input class="form-control" name="nombre" value="${eh(c.nombre||'')}" required></div>
+        <div class="col-md-6"><label class="form-label">DNI / CUIT</label><input class="form-control" name="dni_cuit" value="${eh(c.dni_cuit||'')}"></div>
+        <div class="col-md-6"><label class="form-label">Teléfono</label><input class="form-control" name="telefono" value="${eh(c.telefono||'')}"></div>
+        <div class="col-md-6"><label class="form-label">Email</label><input class="form-control" type="email" name="email" value="${eh(c.email||'')}"></div>
+        <div class="col-12"><label class="form-label">Notas / historial</label><textarea class="form-control" name="notas_historial" rows="3">${eh(c.notas_historial||'')}</textarea></div>
+      </div>
+      <div class="d-flex justify-content-end gap-2 mt-4">
+        <button type="button" class="btn-soft" onclick="closeModal()">Cancelar</button>
+        <button type="submit" class="btn-navy">💾 Guardar</button>
+      </div>
+    </form>`);
+
+  el('clienteForm').onsubmit = e=>{
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(e.target).entries());
+    gsRun('apiSaveCliente',[data,App.session],res=>{
+      if (!res.ok) return toast(res.message,'error');
+      closeModal(); toast('Cliente guardado.');
+      // Optimistic
+      const idx = App.data.clientes.findIndex(c=>c.id===res.data.id);
+      if (idx>=0) App.data.clientes[idx]=res.data; else App.data.clientes.push(res.data);
+      renderView(App.view);
+      revalidate(true);
+    });
+  };
+}
+
+function openTurnoConCliente(clienteId) {
+  openTurnoModal();
+  setTimeout(()=>{
+    const c = byId(App.data.clientes,clienteId);
+    const cid = el('tClienteId'); const cs = el('tClienteSearch');
+    if (cid) cid.value = clienteId;
+    if (cs)  cs.value  = c.nombre||'';
+  }, 50);
+}
+
+
+function isSetupComplete(){
+  return String(getSetting('Setup_Completo')||'').toUpperCase()==='SI';
+}
+function setupWizardHTML(){
+  const checks = [
+    ['Datos del negocio', !!getSetting('Nombre_Empresa') && !!getSetting('Nombre_Sistema')],
+    ['Logo o iniciales', !!getSetting('Logo_URL') || !!getSetting('Iniciales_Marca')],
+    ['Servicios cargados', (App.data.servicios||[]).length>0],
+    ['Sucursales cargadas', (App.data.sucursales||[]).length>0],
+    ['Profesionales activos', profesionales().length>0],
+    ['Horarios laborales', (App.data.disponibilidad||[]).length>0],
+    ['WhatsApp / pagos', !!getSetting('WA_Negocio') && (!!getSetting('Pago_CBU') || !!getSetting('Pago_Alias') || !!getSetting('Pago_MP'))]
+  ];
+  const ok = checks.filter(x=>x[1]).length;
+  return `<div class="panel card-soft" style="border-left:5px solid var(--accent);margin-bottom:16px;">
+    <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+      <div>
+        <h3 style="margin:0 0 6px;color:var(--navy);">🚀 Configuración inicial de la app</h3>
+        <p style="font-size:13px;color:var(--muted);margin:0;">Esto se hace después del deploy. No necesitás tocar código para cambiar marca, servicios, horarios, pagos o WhatsApp.</p>
+      </div>
+      <div style="font-size:22px;font-weight:900;color:var(--navy);">${ok}/${checks.length}</div>
+    </div>
+    <div class="row g-2 mt-3">
+      ${checks.map(([label,done])=>`<div class="col-md-3 col-sm-6"><div style="padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:${done?'#f0fdf4':'#fff7ed'};font-size:12px;font-weight:700;color:${done?'#065f46':'#92400e'};">${done?'✅':'⚠️'} ${label}</div></div>`).join('')}
+    </div>
+    <button class="btn-navy mt-3" onclick="marcarSetupCompleto()">Marcar instalación como completa</button>
+  </div>`;
+}
+function marcarSetupCompleto(){
+  gsRun('apiSaveAjustes',[{Setup_Completo:'SI'},App.session],res=>{
+    if(!res.ok) return toast(res.message,'error');
+    const row=App.data.ajustes.find(a=>a.clave==='Setup_Completo');
+    if(row) row.valor='SI'; else App.data.ajustes.push({clave:'Setup_Completo',valor:'SI'});
+    toast('Instalación marcada como completa.');
+    renderConfig();
+  });
+}
+
+/* ════════════════════════════════════════════════════
+   CONFIGURACIÓN
+════════════════════════════════════════════════════ */
+function renderConfig() {
+  const root = el('view-config');
+  if (App.session.rol!=='Admin') {
+    root.innerHTML=`<div class="panel card-soft">Sin permisos.</div>`; return;
+  }
+  const g = key => eh(getSetting(key));
+  const raw = key => getSetting(key);
+  const sel = (key,val) => String(raw(key)||'')===String(val) ? 'selected' : '';
+
+  root.innerHTML = `
+    ${!isSetupComplete()?setupWizardHTML():''}
+    <div class="config-grid">
+
+      <!-- Personalización general -->
+      <div class="config-card card-soft">
+        <h4>🎨 Personalización general</h4>
+        <form id="ajustesForm">
+          ${[
+            ['Nombre_Empresa','Nombre empresa'],
+            ['Nombre_Sistema','Nombre sistema'],
+            ['Texto_Login_Titulo','Título login'],
+            ['Texto_Login_Subtitulo','Subtítulo login'],
+            ['Texto_Login_Boton','Texto botón login'],
+            ['Iniciales_Marca','Iniciales marca'],
+            ['Logo_URL','Logo URL'],
+            ['Fondo_Login_URL','Fondo login URL'],
+            ['Moneda','Moneda']
+          ].map(([k,l])=>`
+            <label class="form-label">${l}</label>
+            <input class="form-control mb-2" name="${k}" value="${g(k)}">`).join('')}
+          <div style="background:#f8fbff;border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:12px;color:var(--muted);margin:8px 0 12px;">
+            <strong style="color:var(--navy);">URL pública del logo:</strong> debe ser una imagen directa y accesible sin iniciar sesión. Lo ideal es que termine en <code>.png</code>, <code>.jpg</code>, <code>.jpeg</code>, <code>.webp</code> o sea un link público que devuelva la imagen directamente. No sirve un link privado de Drive ni un enlace que abre una página de vista previa.
+          </div>
+          <hr>
+          <label class="form-label">Colores</label>
+          ${[
+            ['Color_Primario','Primario'],['Color_Secundario','Secundario'],
+            ['Color_Acento','Acento'],['Color_Fondo','Fondo'],
+            ['Color_Tarjeta','Tarjeta'],['Color_Texto','Texto'],['Color_Suave','Texto suave']
+          ].map(([k,l])=>`
+            <div class="d-flex align-items-center gap-2 mb-2">
+              <input type="color" class="form-control form-control-color" name="${k}" value="${g(k)||'#0b1f3a'}" style="width:42px;height:36px;padding:2px;">
+              <span style="font-size:12px;color:var(--muted);">${l}</span>
+            </div>`).join('')}
+          <hr>
+          ${[
+            ['Plantilla_WhatsApp','Plantilla WhatsApp','Variables: {{cliente}} {{fecha}} {{hora}} {{sucursal}} {{servicio}}'],
+            ['Plantilla_Email','Plantilla Email','']
+          ].map(([k,l,hint])=>`
+            <label class="form-label">${l}</label>
+            <textarea class="form-control mb-1" name="${k}" rows="3">${g(k)}</textarea>
+            ${hint?`<small style="color:var(--muted);font-size:11px;">${hint}</small>`:''}
+            <div class="mb-2"></div>`).join('')}
+          <button type="submit" class="btn-navy w-100 mt-2">💾 Guardar personalización</button>
+        </form>
+      </div>
+
+      <!-- Servicios -->
+      <div class="config-card card-soft">
+        <h4>🛎 Servicios</h4>
+        <button class="btn-navy mb-3" onclick="openServicioModal()">+ Nuevo servicio</button>
+        <div id="serviciosList">
+          ${App.data.servicios.map(s=>`
+            <div class="turno-mini" style="grid-template-columns:24px 1fr auto;align-items:center;">
+              <div style="width:20px;height:20px;border-radius:6px;background:${eh(s.color_hex)};flex-shrink:0;"></div>
+              <div>
+                <strong style="font-size:13px;">${eh(s.nombre)}</strong>
+                <div style="font-size:11px;color:var(--muted);">${s.duracion_min}min · ${formatMoney(s.precio)}</div>
+              </div>
+              <div class="d-flex gap-1">
+                <button class="btn-icon" onclick="openServicioModal('${s.id}')">✏️</button>
+                <button class="btn-danger" onclick="delServicio('${s.id}')">🗑</button>
+              </div>
+            </div>`).join('')}
+        </div>
+      </div>
+
+      <!-- Sucursales -->
+      <div class="config-card card-soft">
+        <h4>🏢 Sucursales</h4>
+        <button class="btn-navy mb-3" onclick="openSucursalModal()">+ Nueva sucursal</button>
+        ${App.data.sucursales.map(s=>`
+          <div class="turno-mini" style="grid-template-columns:1fr auto;align-items:center;">
+            <div>
+              <strong style="font-size:13px;">${eh(s.nombre)}</strong>
+              <div style="font-size:11px;color:var(--muted);">${eh(s.direccion)}</div>
+            </div>
+            <button class="btn-icon" onclick="openSucursalModal('${s.id}')">✏️</button>
+          </div>`).join('')}
+      </div>
+    </div>
+
+    <!-- PAGOS -->
+    <div class="panel card-soft mt-3">
+      <h3 style="margin-bottom:16px;">💳 Métodos de pago</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:18px;">
+        Estos datos se usan al presionar "Enviar pago" en el modal de turno o "Cobrar" en Solicitudes.
+        Se arma un mensaje de WhatsApp automático con el monto y los medios de pago activos.
+      </p>
+
+      <!-- Preview de métodos activos -->
+      <div id="pagoPreviewCards" style="margin-bottom:20px;"></div>
+
+      <form id="pagosForm">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label">CBU</label>
+            <input class="form-control" name="Pago_CBU" value="${g('Pago_CBU')}" placeholder="0000001234567890123456" oninput="previewPago()">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Alias CBU</label>
+            <input class="form-control" name="Pago_Alias" value="${g('Pago_Alias')}" placeholder="EMPRESA.PAGOS" oninput="previewPago()">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Link Mercado Pago</label>
+            <input class="form-control" name="Pago_MP" value="${g('Pago_MP')}" placeholder="https://mpago.la/..." oninput="previewPago()">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Otra billetera — Nombre</label>
+            <input class="form-control" name="Pago_Otro_Nombre" value="${g('Pago_Otro_Nombre')}" placeholder="Ej: Uala, Naranja X..." oninput="previewPago()">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Otra billetera — Link</label>
+            <input class="form-control" name="Pago_Otro_Link" value="${g('Pago_Otro_Link')}" placeholder="https://..." oninput="previewPago()">
+          </div>
+          <div class="col-12">
+            <label class="form-label">Plantilla mensaje de pago WhatsApp</label>
+            <textarea class="form-control" name="Plantilla_Pago" rows="4">${g('Plantilla_Pago')}</textarea>
+            <small style="color:var(--muted);font-size:11px;">Variables: {{cliente}} {{servicio}} {{monto}} {{moneda}} {{metodos_pago}} {{cbu}} {{alias}} {{mp_link}}</small>
+          </div>
+          <div class="col-12">
+            <button type="submit" class="btn-navy">💾 Guardar pagos</button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <!-- CONTACTO / NOTIFICACIONES -->
+    <div class="panel card-soft mt-3">
+      <h3 style="margin-bottom:16px;">🔔 Notificaciones del carrito</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">
+        Cuando un cliente envía una solicitud desde el carrito público, el sistema notifica a estos contactos.
+      </p>
+      <form id="notifForm">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">WhatsApp del negocio (con código país)</label>
+            <input class="form-control" name="WA_Negocio" value="${g('WA_Negocio')}" placeholder="549381xxxxxxx">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Email del administrador</label>
+            <input class="form-control" name="Email_Admin" value="${g('Email_Admin')}" placeholder="admin@empresa.com">
+          </div>
+          <div class="col-12">
+            <button type="submit" class="btn-navy">💾 Guardar notificaciones</button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+
+    <!-- TELEGRAM -->
+    <div class="panel card-soft mt-3">
+      <h3 style="margin-bottom:16px;">📲 Sincronización con Telegram</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">
+        Conectá un bot de Telegram para recibir avisos internos prácticamente en tiempo real: solicitudes, cambios, pagos, turnos de hoy/mañana, atrasados y alertas de configuración. El sistema envía al momento y además hace un barrido automático cada minuto.
+      </p>
+      <form id="telegramForm">
+        <div class="row g-3">
+          <div class="col-md-3">
+            <label class="form-label">Telegram activo</label>
+            <select class="form-select" name="Telegram_Activo">
+              <option value="NO" ${sel('Telegram_Activo','NO')}>NO</option>
+              <option value="SI" ${sel('Telegram_Activo','SI')}>SI</option>
+            </select>
+          </div>
+          <div class="col-md-5">
+            <label class="form-label">Bot Token / API Key</label>
+            <input class="form-control" name="Telegram_Bot_Token" value="${g('Telegram_Bot_Token')}" placeholder="123456789:AA...">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Chat ID / Key personal</label>
+            <input class="form-control" id="telegramChatId" name="Telegram_Chat_ID" value="${g('Telegram_Chat_ID')}" placeholder="Ej: 123456789">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Avisar solicitudes nuevas</label>
+            <select class="form-select" name="Telegram_Notificar_Solicitudes">
+              <option value="SI" ${sel('Telegram_Notificar_Solicitudes','SI')}>SI</option>
+              <option value="NO" ${sel('Telegram_Notificar_Solicitudes','NO')}>NO</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Avisar cambios de estado</label>
+            <select class="form-select" name="Telegram_Notificar_Cambios">
+              <option value="SI" ${sel('Telegram_Notificar_Cambios','SI')}>SI</option>
+              <option value="NO" ${sel('Telegram_Notificar_Cambios','NO')}>NO</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Avisar pagos</label>
+            <select class="form-select" name="Telegram_Notificar_Pagos">
+              <option value="SI" ${sel('Telegram_Notificar_Pagos','SI')}>SI</option>
+              <option value="NO" ${sel('Telegram_Notificar_Pagos','NO')}>NO</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Enviar alertas del centro</label>
+            <select class="form-select" name="Telegram_Notificar_Alertas">
+              <option value="SI" ${sel('Telegram_Notificar_Alertas','SI')}>SI</option>
+              <option value="NO" ${sel('Telegram_Notificar_Alertas','NO')}>NO</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Avisar turnos / avisos</label>
+            <select class="form-select" name="Telegram_Notificar_Turnos">
+              <option value="SI" ${sel('Telegram_Notificar_Turnos','SI')}>SI</option>
+              <option value="NO" ${sel('Telegram_Notificar_Turnos','NO')}>NO</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Avisar configuración incompleta</label>
+            <select class="form-select" name="Telegram_Notificar_Config">
+              <option value="SI" ${sel('Telegram_Notificar_Config','SI')}>SI</option>
+              <option value="NO" ${sel('Telegram_Notificar_Config','NO')}>NO</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Repetir pendientes cada día</label>
+            <select class="form-select" name="Telegram_Repetir_Alertas_Diarias">
+              <option value="SI" ${sel('Telegram_Repetir_Alertas_Diarias','SI')}>SI</option>
+              <option value="NO" ${sel('Telegram_Repetir_Alertas_Diarias','NO')}>NO</option>
+            </select>
+          </div>
+          <div class="col-12">
+            <div style="background:#f8fbff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:12px;color:var(--muted);">
+              <strong style="color:var(--navy);">Cómo configurarlo fácil:</strong><br>
+              1) Pegá el token del bot. 2) Mandale <strong>hola</strong> al bot desde tu Telegram. 3) Tocá <strong>Detectar chat</strong>. 4) Poné Telegram activo = SI. 5) Tocá <strong>Guardar y activar tiempo real</strong>. 6) Probá con <strong>Enviar prueba</strong>.
+            </div>
+          </div>
+          <div class="col-12 d-flex gap-2 flex-wrap">
+            <button type="submit" class="btn-navy">💾 Guardar y activar tiempo real</button>
+            <button type="button" class="btn-soft" onclick="telegramDetectChat()">🔎 Detectar chat</button>
+            <button type="button" class="btn-soft" onclick="telegramTest()">📨 Enviar prueba</button>
+            <button type="button" class="btn-soft" onclick="telegramRunNow()">🔔 Mandar alertas ahora</button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <!-- CARRITO PÚBLICO -->
+    <div class="panel card-soft mt-3">
+      <h3 style="margin-bottom:8px;">🛒 Portal de reservas público</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">
+        Compartí este link con tus clientes para que puedan reservar turnos por su cuenta. 
+        El sistema valida disponibilidad real y evita solapamientos.
+      </p>
+      <div style="background:#f0f9ff;border:1px solid #bfdbfe;border-radius:11px;padding:14px 16px;margin-bottom:14px;">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:4px;">URL DEL PORTAL PÚBLICO</div>
+        <div style="font-size:13px;font-weight:600;color:var(--navy);word-break:break-all;" id="bookingUrlDisplay">
+          [URL del deploy]?page=booking<br>
+          <span style="font-size:11px;color:var(--muted);">Reemplazá [URL del deploy] con la URL de tu webapp de Google Apps Script.</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:6px;">Centro de alertas manuales</div>
+          <p style="font-size:12px;color:var(--muted);margin-bottom:8px;">
+            Los avisos no se envían solos por WhatsApp. La app muestra alertas con campanita para solicitudes nuevas, turnos próximos, pagos pendientes y configuraciones incompletas. 
+            El operador abre WhatsApp desde <strong>Alertas</strong> y luego marca el aviso como enviado.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Disponibilidad -->
+    <div class="panel card-soft mt-3">
+      <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h3 style="margin:0;">⏰ Horarios laborales por profesional</h3>
+        <button class="btn-navy" onclick="openDisponibilidadModal()">Editar disponibilidad</button>
+      </div>
+      ${profesionales().length===0?`<div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:12px 14px;color:#92400e;font-size:13px;margin-bottom:12px;">⚠️ No hay profesionales activos. Primero cargalos desde <strong>Profesionales</strong> para que aparezcan en el selector de disponibilidad.<br><button class="btn-soft mt-2" onclick="switchView('profesionales')">Ir a Profesionales</button></div>`:''}
+      <div class="table-soft">
+        <table class="table align-middle mb-0">
+          <thead><tr><th>Profesional</th><th>Día</th><th>Desde</th><th>Hasta</th></tr></thead>
+          <tbody>
+            ${App.data.disponibilidad.map(d=>`<tr>
+              <td>${eh(byId(App.data.usuarios,d.usuario_id).nombre||'')}</td>
+              <td>${diaNombre(d.dia_semana)}</td>
+              <td>${eh(d.hora_desde)}</td>
+              <td>${eh(d.hora_hasta)}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+
+  el('ajustesForm').onsubmit = e=>{
+    e.preventDefault();
+    const obj = Object.fromEntries(new FormData(e.target).entries());
+    gsRun('apiSaveAjustes',[obj,App.session],res=>{
+      if (!res.ok) return toast(res.message,'error');
+      Object.entries(obj).forEach(([k,v])=>{
+        const row = App.data.ajustes.find(a=>a.clave===k);
+        if (row) row.valor=v; else App.data.ajustes.push({clave:k,valor:v});
+      });
+      applyAjustes(false);
+      toast('Personalización guardada.');
+      revalidate(true);
+    });
+  };
+
+  el('pagosForm').onsubmit = e=>{
+    e.preventDefault();
+    const obj = Object.fromEntries(new FormData(e.target).entries());
+    gsRun('apiSaveAjustes',[obj,App.session],res=>{
+      if (!res.ok) return toast(res.message,'error');
+      Object.entries(obj).forEach(([k,v])=>{
+        const row = App.data.ajustes.find(a=>a.clave===k);
+        if (row) row.valor=v; else App.data.ajustes.push({clave:k,valor:v});
+      });
+      toast('Datos de pago guardados.');
+      previewPago();
+    });
+  };
+
+  el('notifForm').onsubmit = e=>{
+    e.preventDefault();
+    const obj = Object.fromEntries(new FormData(e.target).entries());
+    gsRun('apiSaveAjustes',[obj,App.session],res=>{
+      if (!res.ok) return toast(res.message,'error');
+      Object.entries(obj).forEach(([k,v])=>{
+        const row = App.data.ajustes.find(a=>a.clave===k);
+        if (row) row.valor=v; else App.data.ajustes.push({clave:k,valor:v});
+      });
+      toast('Notificaciones guardadas.');
+    });
+  };
+
+  el('telegramForm').onsubmit = e=>{
+    e.preventDefault();
+    const obj = Object.fromEntries(new FormData(e.target).entries());
+    gsRun('apiSaveAjustes',[obj,App.session],res=>{
+      if (!res.ok) return toast(res.message,'error');
+      Object.entries(obj).forEach(([k,v])=>{
+        const row = App.data.ajustes.find(a=>a.clave===k);
+        if (row) row.valor=v; else App.data.ajustes.push({clave:k,valor:v});
+      });
+      if(String(obj.Telegram_Activo||'').toUpperCase()==='SI'){
+        toast('Telegram guardado. Activando tiempo real...');
+        gsRun('apiSetupTelegramRealtimeTrigger',[App.session],r=>{
+          if(!r.ok) return toast(r.message,'error');
+          toast('Telegram en tiempo real activado. Revisa alertas cada 1 minuto.');
+          gsRun('apiRunTelegramAlertasRealtime',[App.session],x=>{
+            if(x && x.ok) toast('Barrido inicial enviado/actualizado.');
+          });
+        },err=>toast(err.message,'error'));
+      } else {
+        toast('Telegram guardado. Quedó desactivado.');
+      }
+    });
+  };
+
+  previewPago();
+}
+
+function openServicioModal(id='') {
+  const s = id ? byId(App.data.servicios,id) : {};
+  openModal(id?'Editar servicio':'Nuevo servicio',`
+    <form id="svcForm">
+      <input type="hidden" name="id" value="${eh(s.id||'')}">
+      <label class="form-label">Nombre</label>
+      <input class="form-control mb-2" name="nombre" value="${eh(s.nombre||'')}" required>
+      <div class="row g-2 mb-2">
+        <div class="col-6"><label class="form-label">Duración (min)</label><input class="form-control" name="duracion_min" type="number" min="5" step="5" value="${eh(s.duracion_min||30)}" required></div>
+        <div class="col-6"><label class="form-label">Precio</label><input class="form-control" name="precio" type="number" min="0" step="100" value="${eh(s.precio||0)}" required></div>
+      </div>
+      <label class="form-label">Color</label>
+      <input class="form-control mb-3" name="color_hex" type="color" value="${eh(s.color_hex||'#91c8ff')}">
+      <div class="d-flex justify-content-end gap-2">
+        <button type="button" class="btn-soft" onclick="closeModal()">Cancelar</button>
+        <button type="submit" class="btn-navy">💾 Guardar</button>
+      </div>
+    </form>`);
+  el('svcForm').onsubmit = e=>{
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(e.target).entries());
+    gsRun('apiSaveServicio',[data,App.session],res=>{
+      if (!res.ok) return toast(res.message,'error');
+      closeModal(); toast('Servicio guardado.');
+      const idx=App.data.servicios.findIndex(s=>s.id===res.data.id);
+      if(idx>=0) App.data.servicios[idx]=res.data; else App.data.servicios.push(res.data);
+      renderView(App.view); revalidate(true);
+    });
+  };
+}
+
+function delServicio(id) {
+  confirmX('¿Eliminar este servicio?',()=>{
+    gsRun('apiDeleteServicio',[id,App.session],res=>{
+      if (!res.ok) return toast(res.message,'error');
+      App.data.servicios = App.data.servicios.filter(s=>s.id!==id);
+      toast('Servicio eliminado.'); renderView(App.view); revalidate(true);
+    });
+  });
+}
+
+function openSucursalModal(id='') {
+  const s = id ? byId(App.data.sucursales,id) : {};
+  openModal(id?'Editar sucursal':'Nueva sucursal',`
+    <form id="sucForm">
+      <input type="hidden" name="id" value="${eh(s.id||'')}">
+      <label class="form-label">Nombre</label><input class="form-control mb-2" name="nombre" value="${eh(s.nombre||'')}" required>
+      <label class="form-label">Dirección</label><input class="form-control mb-2" name="direccion" value="${eh(s.direccion||'')}">
+      <label class="form-label">Teléfono</label><input class="form-control mb-2" name="telefono" value="${eh(s.telefono||'')}">
+      <label class="form-label">Mapa URL</label><input class="form-control mb-3" name="mapa_url" value="${eh(s.mapa_url||'')}">
+      <div class="d-flex justify-content-end gap-2">
+        <button type="button" class="btn-soft" onclick="closeModal()">Cancelar</button>
+        <button type="submit" class="btn-navy">💾 Guardar</button>
+      </div>
+    </form>`);
+  el('sucForm').onsubmit = e=>{
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(e.target).entries());
+    gsRun('apiSaveSucursal',[data,App.session],res=>{
+      if (!res.ok) return toast(res.message,'error');
+      closeModal(); toast('Sucursal guardada.');
+      const idx=App.data.sucursales.findIndex(s=>s.id===res.data.id);
+      if(idx>=0) App.data.sucursales[idx]=res.data; else App.data.sucursales.push(res.data);
+      renderView(App.view); revalidate(true);
+    });
+  };
+}
+
+function openDisponibilidadModal() {
+  openModal('Editar disponibilidad',`
+    <p style="font-size:13px;color:var(--muted);">Cada fila representa un horario semanal para un profesional. Los cambios reemplazan los horarios existentes del profesional seleccionado.</p>
+    <div id="dispRows">${App.data.disponibilidad.map(dispRowHTML).join('')}</div>
+    <button class="btn-soft mt-2" onclick="addDispRow()">+ Agregar fila</button>
+    <div class="d-flex justify-content-end gap-2 mt-4">
+      <button class="btn-soft" onclick="closeModal()">Cancelar</button>
+      <button class="btn-navy" onclick="saveDisponibilidad()">💾 Guardar horarios</button>
+    </div>`);
+}
+
+function dispRowHTML(d={}) {
+  const profsOpts = profesionales().map(p=>`<option value="${p.id}"${p.id===d.usuario_id?' selected':''}>${eh(p.nombre)}</option>`).join('');
+  const diasOpts  = [1,2,3,4,5,6,0].map(n=>`<option value="${n}"${String(n)===String(d.dia_semana)?' selected':''}>${diaNombre(n)}</option>`).join('');
+  return `<div class="row g-2 mb-2 disp-row align-items-center">
+    <input type="hidden" class="disp-id" value="${eh(d.id||'')}">
+    <div class="col-md-4"><select class="form-select disp-user">${profsOpts}</select></div>
+    <div class="col-md-3"><select class="form-select disp-dia">${diasOpts}</select></div>
+    <div class="col-md-2"><input class="form-control disp-desde" type="time" value="${eh(d.hora_desde||'08:00')}"></div>
+    <div class="col-md-2"><input class="form-control disp-hasta" type="time" value="${eh(d.hora_hasta||'18:00')}"></div>
+    <div class="col-md-1"><button class="btn-danger" onclick="this.closest('.disp-row').remove()">×</button></div>
+  </div>`;
+}
+
+function addDispRow() {
+  el('dispRows').insertAdjacentHTML('beforeend', dispRowHTML());
+}
+
+function saveDisponibilidad() {
+  const rows = [...document.querySelectorAll('.disp-row')].map(r=>({
+    id:         r.querySelector('.disp-id').value,
+    usuario_id: r.querySelector('.disp-user').value,
+    dia_semana: r.querySelector('.disp-dia').value,
+    hora_desde: r.querySelector('.disp-desde').value,
+    hora_hasta: r.querySelector('.disp-hasta').value
+  })).filter(r=>r.usuario_id);
+
+  gsRun('apiSaveDisponibilidad',[rows,App.session],res=>{
+    if (!res.ok) return toast(res.message,'error');
+    closeModal(); toast('Disponibilidad guardada.');
+    revalidate(true);
+  });
+}
+
+
+/* ════════════════════════════════════════════════════
+   ALERTAS MANUALES
+════════════════════════════════════════════════════ */
+function localISODate(d=new Date()){
+  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');
+}
+function addDaysISO(days){
+  const d = new Date(); d.setDate(d.getDate()+days);
+  return localISODate(d);
+}
+function parseISODateSafe(v){
+  const s = String(v||'').slice(0,10);
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(!m) return null;
+  return new Date(Number(m[1]), Number(m[2])-1, Number(m[3]));
+}
+function diffDaysISO(a,b){
+  const da = parseISODateSafe(a), db = parseISODateSafe(b);
+  if(!da||!db) return 0;
+  return Math.round((db-da)/(24*60*60*1000));
+}
+function pagoPendiente(t){
+  const p = String(t.pago_estado||'Sin pago');
+  return !['Pagado','Seña pagada','Reembolsado'].includes(p);
+}
+function solicitudAgeLabel(s){
+  const fs = String(s.fecha_solicitud||'').slice(0,10);
+  const d = diffDaysISO(fs, addDaysISO(0));
+  if(!fs || d<=0) return 'Ingresó hoy';
+  if(d===1) return 'Ingresó ayer';
+  return `Hace ${d} días`;
+}
+function alertasPendientes(){
+  const hoy = addDaysISO(0), manana = addDaysISO(1);
+  const alerts = [];
+
+  // 1) Solicitudes nuevas: prioridad máxima para que el operador las vea apenas abre la app.
+  if(['Admin','Recepcionista'].includes(App.session?.rol||'')){
+    (App.data.solicitudes||[])
+      .filter(s=>s.estado==='Nueva')
+      .forEach(s=>{
+        alerts.push({
+          tipo:'SOL_NUEVA', origen:'solicitud', id:s.id, prioridad:0,
+          icon:'🛒', label:'Nueva solicitud', badge:'Nuevo',
+          titulo:s.nombre_cliente||'Cliente',
+          subtitulo:`Solicitud de turno · ${solicitudAgeLabel(s)}`,
+          detalle:`${String(s.servicios_nombres||'').replace(/\|/g, ', ') || 'Servicios sin detalle'} · ${moneda_()} ${Number(s.total||0).toLocaleString('es-AR')}`,
+          fecha:String(s.fecha_solicitud||'').slice(0,10), hora:String(s.fecha_solicitud||'').slice(11,16),
+          color:'#f59e0b'
+        });
+      });
+
+    // 2) Solicitudes contactadas hace varios días sin confirmar: seguimiento comercial.
+    (App.data.solicitudes||[])
+      .filter(s=>s.estado==='Contactada')
+      .forEach(s=>{
+        const fs = String(s.updated_at||s.fecha_solicitud||'').slice(0,10);
+        const dias = diffDaysISO(fs, hoy);
+        if(dias>=2){
+          alerts.push({
+            tipo:'SOL_SEGUIMIENTO', origen:'solicitud', id:s.id, prioridad:4,
+            icon:'📞', label:'Seguimiento', badge:`${dias} días`,
+            titulo:s.nombre_cliente||'Cliente',
+            subtitulo:'Solicitud contactada sin confirmar',
+            detalle:`Revisar si confirma, cancela o necesita nuevo horario · ${moneda_()} ${Number(s.total||0).toLocaleString('es-AR')}`,
+            fecha:fs, hora:'',
+            color:'#6366f1'
+          });
+        }
+      });
+  }
+
+  // 3) Turnos atrasados no resueltos.
+  visibleTurnos()
+    .filter(t=>['Pendiente','Confirmado'].includes(t.estado) && String(t.fecha||'') < hoy)
+    .forEach(t=>{
+      const c = byId(App.data.clientes, t.cliente_id);
+      const s = byId(App.data.servicios, t.servicio_id);
+      alerts.push({
+        tipo:'TURNO_ATRASADO', origen:'turno', id:t.id, prioridad:1,
+        icon:'⏰', label:'Atrasado', badge:'Resolver',
+        titulo:c.nombre||'Cliente',
+        subtitulo:`Turno vencido · ${t.fecha} ${t.hora_inicio}`,
+        detalle:`${s.nombre||'Servicio'} quedó ${t.estado}. Marcar realizado, cancelar o reprogramar.`,
+        fecha:t.fecha, hora:t.hora_inicio,
+        color:'#dc2626'
+      });
+    });
+
+  // 4) Turnos de hoy sin aviso enviado.
+  visibleTurnos()
+    .filter(t=>['Pendiente','Confirmado'].includes(t.estado) && t.fecha===hoy && String(t.alerta_dia_enviada||'').toUpperCase()!=='SI')
+    .forEach(t=>{
+      const c = byId(App.data.clientes, t.cliente_id);
+      const s = byId(App.data.servicios, t.servicio_id);
+      alerts.push({
+        tipo:'TURNO_DIA', origen:'turno', id:t.id, prioridad:2,
+        icon:'🔥', label:'Turno hoy', badge:t.hora_inicio,
+        titulo:c.nombre||'Cliente',
+        subtitulo:`Aviso del día pendiente · ${t.fecha}`,
+        detalle:`${s.nombre||'Servicio'} · ${c.telefono||'Sin teléfono'}`,
+        fecha:t.fecha, hora:t.hora_inicio,
+        color:'#ef4444'
+      });
+    });
+
+  // 5) Turnos de mañana sin aviso D-1.
+  visibleTurnos()
+    .filter(t=>['Pendiente','Confirmado'].includes(t.estado) && t.fecha===manana && String(t.alerta_d1_enviada||'').toUpperCase()!=='SI')
+    .forEach(t=>{
+      const c = byId(App.data.clientes, t.cliente_id);
+      const s = byId(App.data.servicios, t.servicio_id);
+      alerts.push({
+        tipo:'TURNO_D1', origen:'turno', id:t.id, prioridad:3,
+        icon:'🌅', label:'Mañana', badge:t.hora_inicio,
+        titulo:c.nombre||'Cliente',
+        subtitulo:`Aviso D-1 pendiente · ${t.fecha}`,
+        detalle:`${s.nombre||'Servicio'} · ${c.telefono||'Sin teléfono'}`,
+        fecha:t.fecha, hora:t.hora_inicio,
+        color:'#f59e0b'
+      });
+    });
+
+  // 6) Pagos con link enviado que siguen pendientes.
+  visibleTurnos()
+    .filter(t=>['Pendiente','Confirmado'].includes(t.estado) && ['Link enviado','Enviado'].includes(String(t.pago_estado||'')))
+    .forEach(t=>{
+      const c = byId(App.data.clientes, t.cliente_id);
+      const s = byId(App.data.servicios, t.servicio_id);
+      alerts.push({
+        tipo:'PAGO_PENDIENTE', origen:'turno', id:t.id, prioridad:5,
+        icon:'💳', label:'Pago pendiente', badge:'Cobro',
+        titulo:c.nombre||'Cliente',
+        subtitulo:`Pago enviado sin confirmar · ${t.fecha} ${t.hora_inicio}`,
+        detalle:`${s.nombre||'Servicio'} · ${formatMoney(byId(App.data.servicios,t.servicio_id).precio||0)}`,
+        fecha:t.fecha, hora:t.hora_inicio,
+        color:'#7c3aed'
+      });
+    });
+
+  // 7) Turnos realizados sin pago confirmado.
+  visibleTurnos()
+    .filter(t=>t.estado==='Realizado' && pagoPendiente(t))
+    .forEach(t=>{
+      const c = byId(App.data.clientes, t.cliente_id);
+      const s = byId(App.data.servicios, t.servicio_id);
+      alerts.push({
+        tipo:'REALIZADO_SIN_PAGO', origen:'turno', id:t.id, prioridad:6,
+        icon:'🧾', label:'Cobro a revisar', badge:'Sin pago',
+        titulo:c.nombre||'Cliente',
+        subtitulo:`Turno realizado sin pago registrado · ${t.fecha}`,
+        detalle:`${s.nombre||'Servicio'} · ${formatMoney(s.precio||0)}`,
+        fecha:t.fecha, hora:t.hora_inicio,
+        color:'#0f766e'
+      });
+    });
+
+  // 8) Profesionales activos sin disponibilidad: alerta de configuración.
+  if(App.session?.rol==='Admin'){
+    const dispByUser = new Set((App.data.disponibilidad||[]).map(d=>d.usuario_id));
+    profesionales().filter(p=>!dispByUser.has(p.id)).forEach(p=>{
+      alerts.push({
+        tipo:'PROF_SIN_DISP', origen:'config', id:p.id, prioridad:7,
+        icon:'🧑‍💼', label:'Sin disponibilidad', badge:'Config',
+        titulo:p.nombre||'Profesional',
+        subtitulo:'Profesional activo sin horarios cargados',
+        detalle:'No aparecerá correctamente en el portal público hasta cargar disponibilidad.',
+        fecha:'', hora:'',
+        color:'#0284c7'
+      });
+    });
+
+    // 9) Servicios activos con duración o precio inválido.
+    (App.data.servicios||[]).filter(s=>s.estado!=='Inactivo').forEach(s=>{
+      const dur = Number(s.duracion_min||s.duracion||0);
+      const precio = Number(s.precio||0);
+      if(!dur || dur<=0 || precio<0){
+        alerts.push({
+          tipo:'SERVICIO_INCOMPLETO', origen:'config', id:s.id, prioridad:8,
+          icon:'🛎️', label:'Servicio incompleto', badge:'Config',
+          titulo:s.nombre||'Servicio',
+          subtitulo:'Revisar duración o precio',
+          detalle:'La duración es obligatoria para calcular horarios disponibles correctamente.',
+          fecha:'', hora:'',
+          color:'#b45309'
+        });
+      }
+    });
+  }
+
+  return alerts.sort((a,b)=>a.prioridad-b.prioridad || String(a.fecha||'').localeCompare(String(b.fecha||'')) || String(a.hora||'').localeCompare(String(b.hora||'')));
+}
+function updateAlertBadge(){
+  const n = alertasPendientes().length;
+  const b = el('navAlertBadge');
+  if (b) { b.textContent = n; b.classList.toggle('on', n>0); }
+  document.querySelectorAll('[data-view="alertas"]').forEach(btn=>{
+    btn.classList.toggle('has-alerts', n>0);
+  });
+}
+function alertCountByTipo(alerts,tipo){ return alerts.filter(a=>a.tipo===tipo).length; }
+function renderAlertas(){
+  const root = el('view-alertas');
+  const alerts = alertasPendientes();
+  const solN = alerts.filter(a=>a.tipo==='SOL_NUEVA').length;
+  const turnoN = alerts.filter(a=>['TURNO_ATRASADO','TURNO_DIA','TURNO_D1'].includes(a.tipo)).length;
+  const pagoN = alerts.filter(a=>['PAGO_PENDIENTE','REALIZADO_SIN_PAGO'].includes(a.tipo)).length;
+  const configN = alerts.filter(a=>['PROF_SIN_DISP','SERVICIO_INCOMPLETO'].includes(a.tipo)).length;
+
+  root.innerHTML = `
+    <div class="kpi-grid">
+      <div class="kpi card-soft"><div class="kpi-icon">🔔</div><small>Total alertas</small><strong>${alerts.length}</strong></div>
+      <div class="kpi card-soft" style="border-left:3px solid #f59e0b;"><div class="kpi-icon">🛒</div><small>Solicitudes nuevas</small><strong style="color:#b45309;">${solN}</strong></div>
+      <div class="kpi card-soft" style="border-left:3px solid #ef4444;"><div class="kpi-icon">📅</div><small>Turnos / avisos</small><strong style="color:#b91c1c;">${turnoN}</strong></div>
+      <div class="kpi card-soft" style="border-left:3px solid #7c3aed;"><div class="kpi-icon">💳</div><small>Pagos / config</small><strong>${pagoN + configN}</strong></div>
+    </div>
+    <div class="panel card-soft">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+        <div>
+          <h3 style="margin:0;color:var(--navy);">🔔 Centro de alertas</h3>
+          <p style="font-size:13px;color:var(--muted);margin:4px 0 0;">
+            Muestra novedades accionables: solicitudes nuevas, seguimientos, avisos de turnos, pagos pendientes y configuraciones incompletas.
+          </p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+          <button class="btn-soft" onclick="switchView('solicitudes')">🛒 Solicitudes</button>
+          <button class="btn-soft" onclick="manualRefresh()">↻ Actualizar</button>
+        </div>
+      </div>
+      ${alerts.length ? alerts.map(alertaCardHTML).join('') : `<div class="empty-state">✅ No hay alertas pendientes. Todo está al día.</div>`}
+    </div>`;
+  updateAlertBadge();
+}
+function alertaCardHTML(a){
+  const leftBg = a.color || '#f59e0b';
+  return `<div class="turno-mini alert-card" style="grid-template-columns:92px 1fr auto;align-items:start;border-left-color:${leftBg};">
+    <div class="time-pill" style="background:${leftBg}18;color:${leftBg};">
+      <div style="font-size:18px;line-height:1;">${a.icon}</div>
+      <div>${eh(a.label)}</div>
+      ${a.badge?`<div style="font-size:10px;font-weight:900;margin-top:2px;">${eh(a.badge)}</div>`:''}
+    </div>
+    <div>
+      <strong style="font-size:14px;">${eh(a.titulo)}</strong>
+      <div style="font-size:12px;color:var(--muted);">${eh(a.subtitulo)}</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:2px;">${eh(a.detalle)}</div>
+    </div>
+    <div class="d-flex gap-1 flex-wrap justify-content-end">
+      ${alertaActionsHTML(a)}
+    </div>
+  </div>`;
+}
+function alertaActionsHTML(a){
+  if(a.tipo==='SOL_NUEVA' || a.tipo==='SOL_SEGUIMIENTO'){
+    return `
+      <button class="btn-navy" onclick="abrirSolDetalle('${a.id}')">Gestionar</button>
+      <button class="btn-soft" onclick="solWhatsApp('${a.id}')">📲 WhatsApp</button>
+      ${a.tipo==='SOL_NUEVA'?`<button class="btn-soft" onclick="cambiarEstadoSol('${a.id}','Contactada'); setTimeout(()=>renderAlertas(),250);">Marcar contactada</button>`:''}
+    `;
+  }
+  if(a.tipo==='TURNO_DIA' || a.tipo==='TURNO_D1'){
+    const tipo = a.tipo==='TURNO_D1' ? 'D1' : 'DIA';
+    return `
+      <button class="btn-soft" onclick="abrirAlertaWhatsApp('${a.id}','${tipo}')">📲 Abrir WhatsApp</button>
+      <button class="btn-navy" onclick="marcarAlertaEnviada('${a.id}','${tipo}')">✓ Marcar enviada</button>
+      <button class="btn-icon" onclick="openTurnoModal('${a.id}')">Ver turno</button>
+    `;
+  }
+  if(a.tipo==='PAGO_PENDIENTE' || a.tipo==='REALIZADO_SIN_PAGO'){
+    return `
+      <button class="btn-soft" onclick="enviarPago('${a.id}')">💳 Enviar pago</button>
+      <button class="btn-navy" onclick="marcarPagado('${a.id}')">✓ Marcar pagado</button>
+      <button class="btn-icon" onclick="openTurnoModal('${a.id}')">Ver turno</button>
+    `;
+  }
+  if(a.tipo==='TURNO_ATRASADO'){
+    return `
+      <button class="btn-navy" onclick="openTurnoModal('${a.id}')">Resolver turno</button>
+      <button class="btn-soft" onclick="switchView('agenda')">Ver agenda</button>
+    `;
+  }
+  if(a.tipo==='PROF_SIN_DISP'){
+    return `
+      <button class="btn-navy" onclick="switchView('config'); setTimeout(openDisponibilidadModal,350);">Cargar horarios</button>
+      <button class="btn-soft" onclick="switchView('profesionales')">Ver profesional</button>
+    `;
+  }
+  if(a.tipo==='SERVICIO_INCOMPLETO'){
+    return `<button class="btn-navy" onclick="switchView('config')">Revisar servicios</button>`;
+  }
+  return `<button class="btn-soft" onclick="manualRefresh()">Actualizar</button>`;
+}
+function abrirAlertaWhatsApp(turnoId,tipo){
+  gsRun('apiBuildAlertaWhatsAppLink',[turnoId,tipo,App.session],res=>{
+    if(!res.ok) return toast(res.message,'error');
+    window.open(res.data,'_blank');
+    toast('WhatsApp abierto. Cuando lo envíes, marcá la alerta como enviada.');
+  });
+}
+function marcarAlertaEnviada(turnoId,tipo){
+  gsRun('apiMarcarAlertaEnviada',[turnoId,tipo,App.session],res=>{
+    if(!res.ok) return toast(res.message,'error');
+    const idx = App.data.turnos.findIndex(t=>t.id===turnoId);
+    if(idx>=0){
+      if(tipo==='D1') App.data.turnos[idx].alerta_d1_enviada='SI';
+      else App.data.turnos[idx].alerta_dia_enviada='SI';
+    }
+    toast('Alerta marcada como enviada.');
+    renderAlertas();
+    if(App.view==='dashboard') renderDashboard();
+    revalidate(true);
+  });
+}
+
+/* ════════════════════════════════════════════════════
+   PROFESIONALES
+════════════════════════════════════════════════════ */
+function renderProfesionales(){
+  const root = el('view-profesionales');
+  if(App.session.rol!=='Admin'){ root.innerHTML=`<div class="panel card-soft">Sin permisos.</div>`; return; }
+  const list = (App.data.usuarios||[]).filter(u=>u.rol==='Staff');
+  root.innerHTML = `
+    <div class="panel card-soft">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+        <div>
+          <h3 style="margin:0;color:var(--navy);">🧑‍💼 Profesionales / Staff</h3>
+          <p style="font-size:13px;color:var(--muted);margin:4px 0 0;">Los profesionales son usuarios con rol Staff. Solo ellos aparecen en disponibilidad horaria y agenda.</p>
+        </div>
+        <button class="btn-navy" onclick="openProfesionalModal()">+ Nuevo profesional</button>
+      </div>
+      ${list.length ? `<div class="table-soft"><table class="table table-hover align-middle"><thead><tr><th>Nombre</th><th>Email</th><th>Sucursal</th><th>Especialidad</th><th>Estado</th><th></th></tr></thead><tbody>${list.map(profesionalRowHTML).join('')}</tbody></table></div>` : `<div class="empty-state">No hay profesionales cargados. Creá uno para poder asignar disponibilidad horaria.</div>`}
+    </div>`;
+}
+function profesionalRowHTML(u){
+  const suc = byId(App.data.sucursales, u.sucursal_id);
+  return `<tr>
+    <td><strong>${eh(u.nombre)}</strong></td>
+    <td>${eh(u.email)}</td>
+    <td>${eh(suc.nombre||'')}</td>
+    <td>${eh(u.especialidad||'')}</td>
+    <td><span class="status ${u.estado==='Activo'?'st-Realizado':'st-Cancelado'}">${eh(u.estado||'Activo')}</span></td>
+    <td class="text-end"><button class="btn-icon" onclick="openProfesionalModal('${u.id}')">✏️</button> <button class="btn-danger" onclick="desactivarProfesional('${u.id}')">Desactivar</button></td>
+  </tr>`;
+}
+function openProfesionalModal(id=''){
+  const u = id ? byId(App.data.usuarios,id) : {estado:'Activo', rol:'Staff'};
+  const sucOpts = App.data.sucursales.map(s=>`<option value="${s.id}"${s.id===u.sucursal_id?' selected':''}>${eh(s.nombre)}</option>`).join('');
+  openModal(id?'Editar profesional':'Nuevo profesional',`
+    <form id="profForm">
+      <input type="hidden" name="id" value="${eh(u.id||'')}">
+      <input type="hidden" name="rol" value="Staff">
+      <div class="row g-2">
+        <div class="col-md-6"><label class="form-label">Nombre</label><input class="form-control" name="nombre" value="${eh(u.nombre||'')}" required></div>
+        <div class="col-md-6"><label class="form-label">Email/login</label><input class="form-control" type="email" name="email" value="${eh(u.email||'')}" required></div>
+        <div class="col-md-6"><label class="form-label">Contraseña ${id?'(solo si cambia)':''}</label><input class="form-control" type="password" name="password" autocomplete="new-password" ${id?'':'required'}></div>
+        <div class="col-md-6"><label class="form-label">Sucursal</label><select class="form-select" name="sucursal_id"><option value="">Sin sucursal</option>${sucOpts}</select></div>
+        <div class="col-md-6"><label class="form-label">Especialidad</label><input class="form-control" name="especialidad" value="${eh(u.especialidad||'')}"></div>
+        <div class="col-md-6"><label class="form-label">Estado</label><select class="form-select" name="estado"><option ${u.estado==='Activo'?'selected':''}>Activo</option><option ${u.estado==='Inactivo'?'selected':''}>Inactivo</option></select></div>
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-top:10px;">Este usuario aparecerá en Disponibilidad solo si queda con rol <strong>Staff</strong> y estado <strong>Activo</strong>.</div>
+      <div class="d-flex justify-content-end gap-2 mt-4"><button type="button" class="btn-soft" onclick="closeModal()">Cancelar</button><button class="btn-navy" type="submit">💾 Guardar</button></div>
+    </form>`);
+  el('profForm').onsubmit=e=>{
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(e.target).entries());
+    if(!data.password) delete data.password;
+    gsRun('apiSaveUsuario',[data,App.session],res=>{
+      if(!res.ok) return toast(res.message,'error');
+      closeModal(); toast('Profesional guardado.');
+      const idx = App.data.usuarios.findIndex(x=>x.id===res.data.id);
+      if(idx>=0) App.data.usuarios[idx]=res.data; else App.data.usuarios.push(res.data);
+      renderProfesionales(); revalidate(true);
+    });
+  };
+}
+function desactivarProfesional(id){
+  confirmX('¿Desactivar este profesional? No se borran sus turnos históricos.',()=>{
+    gsRun('apiDeleteUsuario',[id,App.session],res=>{
+      if(!res.ok) return toast(res.message,'error');
+      const idx=App.data.usuarios.findIndex(u=>u.id===id);
+      if(idx>=0) App.data.usuarios[idx].estado='Inactivo';
+      toast('Profesional desactivado.'); renderProfesionales(); revalidate(true);
+    });
+  });
+}
+
+/* ════════════════════════════════════════════════════
+   REPORTES
+════════════════════════════════════════════════════ */
+function renderReportes() {
+  const root = el('view-reportes');
+  if (App.session.rol!=='Admin') {
+    root.innerHTML=`<div class="panel card-soft">Sin permisos.</div>`; return;
+  }
+
+  const turnos = App.data.turnos;
+  const profs  = profesionales();
+
+  const totalRecaudado = turnos.filter(t=>t.pago_estado==='Pagado'||t.estado==='Realizado')
+    .reduce((s,t)=>s+Number(byId(App.data.servicios,t.servicio_id).precio||0),0);
+
+  root.innerHTML = `
+    <div class="kpi-grid" style="margin-bottom:20px;">
+      <div class="kpi card-soft"><div class="kpi-icon">📋</div><small>Total turnos</small><strong>${turnos.length}</strong></div>
+      <div class="kpi card-soft"><div class="kpi-icon">💰</div><small>Recaudación real</small><strong style="font-size:20px;">${formatMoney(totalRecaudado)}</strong></div>
+      <div class="kpi card-soft"><div class="kpi-icon">✅</div><small>Realizados</small><strong>${turnos.filter(t=>t.estado==='Realizado').length}</strong></div>
+      <div class="kpi card-soft"><div class="kpi-icon">❌</div><small>Cancelados</small><strong>${turnos.filter(t=>t.estado==='Cancelado').length}</strong></div>
+    </div>
+
+    <div class="section-grid">
+      <div class="panel card-soft"><h3>Turnos por estado</h3><canvas id="chartEstados" height="160"></canvas></div>
+      <div class="panel card-soft"><h3>Ranking de servicios</h3><canvas id="chartServicios" height="160"></canvas></div>
+    </div>
+
+    <div class="panel card-soft mt-3">
+      <h3>Productividad por profesional</h3>
+      <canvas id="chartProfes" height="100"></canvas>
+    </div>
+
+    <div class="table-soft mt-3">
+      <table class="table align-middle mb-0">
+        <thead><tr><th>Profesional</th><th>Turnos totales</th><th>Realizados</th><th>Estimado ${moneda()}</th></tr></thead>
+        <tbody>
+          ${profs.map(p=>{
+            const ts=turnos.filter(t=>t.profesional_id===p.id);
+            const real=ts.filter(t=>t.estado==='Realizado');
+            const rec=real.reduce((s,t)=>s+Number(byId(App.data.servicios,t.servicio_id).precio||0),0);
+            return `<tr><td><strong>${eh(p.nombre)}</strong></td><td>${ts.length}</td><td>${real.length}</td><td>${formatMoney(rec)}</td></tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+async function renderCharts() {
+  if (typeof Chart==='undefined') {
+    App.chartPromise ||= new Promise((resolve,reject)=>{
+      const s=document.createElement('script');
+      s.src='https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js';
+      s.onload=resolve;s.onerror=()=>reject(new Error('No se pudo cargar Chart.js'));
+      document.head.appendChild(s);
+    });
+    try { await App.chartPromise; } catch(e) { toast(e.message,'error'); return; }
+  }
+  // Destruir charts previos
+  Object.values(App.charts).forEach(c=>c?.destroy&&c.destroy());
+  App.charts={};
+
+  const turnos = App.data.turnos;
+  const est = ['Pendiente','Confirmado','Realizado','Cancelado','Reprogramado','Ausente'];
+
+  const c1=el('chartEstados'), c2=el('chartServicios'), c3=el('chartProfes');
+  if (!c1||!c2||!c3) return;
+
+  App.charts.estados = new Chart(c1,{type:'doughnut',data:{
+    labels:est,
+    datasets:[{data:est.map(e=>turnos.filter(t=>t.estado===e).length),
+      backgroundColor:['#ffd6a5','#91c8ff','#b8f7d4','#ffb3c6','#d7c7ff','#e2e8f0'],borderWidth:0}]
+  },options:{responsive:true,plugins:{legend:{position:'bottom'}}}});
+
+  App.charts.servicios = new Chart(c2,{type:'bar',data:{
+    labels:App.data.servicios.map(s=>s.nombre),
+    datasets:[{label:'Turnos',data:App.data.servicios.map(s=>turnos.filter(t=>t.servicio_id===s.id).length),
+      backgroundColor:App.data.servicios.map(s=>s.color_hex||'#91c8ff'),borderRadius:6}]
+  },options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}});
+
+  const profs=profesionales();
+  App.charts.profes = new Chart(c3,{type:'bar',data:{
+    labels:profs.map(p=>p.nombre),
+    datasets:[{label:'Turnos asignados',data:profs.map(p=>turnos.filter(t=>t.profesional_id===p.id).length),
+      backgroundColor:getSetting('Color_Acento')||'#91c8ff',borderRadius:6}]
+  },options:{responsive:true,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true}}}});
+}
+
+/* ════════════════════════════════════════════════════
+   SOLICITUDES (carrito público)
+════════════════════════════════════════════════════ */
+function renderSolicitudes() {
+  const root = el('view-solicitudes');
+  if (!['Admin','Recepcionista'].includes(App.session.rol)) {
+    root.innerHTML=`<div class="panel card-soft">Sin permisos.</div>`; return;
+  }
+
+  const sols = (App.data.solicitudes||[]).slice().sort((a,b)=>b.fecha_solicitud.localeCompare(a.fecha_solicitud));
+  const counts = { Nueva:0, Contactada:0, Confirmada:0, Cancelada:0 };
+  sols.forEach(s => { if (counts[s.estado]!==undefined) counts[s.estado]++; });
+
+  root.innerHTML = `
+    <div class="kpi-grid" style="margin-bottom:20px;">
+      <div class="kpi card-soft"><div class="kpi-icon">🛒</div><small>Nuevas</small><strong style="color:#b45309;">${counts.Nueva}</strong></div>
+      <div class="kpi card-soft"><div class="kpi-icon">📞</div><small>Contactadas</small><strong>${counts.Contactada}</strong></div>
+      <div class="kpi card-soft"><div class="kpi-icon">✅</div><small>Confirmadas</small><strong style="color:#065f46;">${counts.Confirmada}</strong></div>
+      <div class="kpi card-soft"><div class="kpi-icon">❌</div><small>Canceladas</small><strong style="color:#9f1239;">${counts.Cancelada}</strong></div>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+      <div class="d-flex gap-2 flex-wrap" id="solFiltros">
+        ${['Todas','Nueva','Contactada','Confirmada','Cancelada'].map(f=>
+          `<button class="btn-soft" style="${f==='Todas'?'background:var(--navy);color:#fff;':''}" onclick="filtrarSolicitudes('${f}',this)">${f}</button>`
+        ).join('')}
+      </div>
+      <button class="btn-soft" onclick="manualRefresh()">↻ Actualizar info</button>
+    </div>
+
+    <div id="solList">
+      ${sols.length ? sols.map(solCardHTML).join('') : `<div class="panel card-soft" style="text-align:center;color:var(--muted);">No hay solicitudes aún. Compartí el link del carrito público.</div>`}
+    </div>`;
+}
+
+function solCardHTML(s) {
+  const svcTags = (s.servicios_nombres||'').split('|').filter(Boolean)
+    .map(n=>`<span class="sol-servicios-tag">${eh(n)}</span>`).join('');
+  const moneda = moneda_() ;
+  return `
+  <div class="sol-card ${eh(s.estado)}" id="sol-${s.id}">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+      <div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <strong style="font-size:15px;">${eh(s.nombre_cliente)}</strong>
+          <span class="sol-estado sol-${eh(s.estado)}">${eh(s.estado)}</span>
+        </div>
+        <div style="font-size:12px;color:var(--muted);margin-top:3px;">
+          📞 ${eh(s.telefono_cliente)} · ✉️ ${eh(s.email_cliente)}
+          <span style="margin-left:8px;opacity:.6;">${eh(s.fecha_solicitud)}</span>
+        </div>
+        <div style="margin-top:8px;">${svcTags}</div>
+        ${s.nota_cliente?`<div style="margin-top:6px;font-size:12px;color:var(--muted);">📝 ${eh(s.nota_cliente)}</div>`:''}
+        ${s.nota_interna?`<div style="margin-top:4px;font-size:12px;background:#fef9ec;color:#92400e;padding:4px 8px;border-radius:8px;">🔒 ${eh(s.nota_interna)}</div>`:''}
+      </div>
+      <div style="text-align:right;flex-shrink:0;">
+        <div style="font-size:20px;font-weight:800;color:var(--navy);">${moneda} ${Number(s.total).toLocaleString('es-AR')}</div>
+        <div style="font-size:11px;color:var(--muted);">Total estimado</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--line);">
+      <button class="btn-soft" style="font-size:12px;" onclick="abrirSolDetalle('${s.id}')">📋 Gestionar</button>
+      ${s.telefono_cliente?`<button class="btn-soft" style="font-size:12px;" onclick="solWhatsApp('${s.id}')">📲 WhatsApp</button>`:''}
+      ${s.telefono_cliente?`<button class="btn-soft" style="font-size:12px;background:#25d366;color:#fff;border-color:#25d366;" onclick="solEnviarPago('${s.id}')">💳 Cobrar</button>`:''}
+      <button class="btn-soft" style="font-size:12px;" onclick="cambiarEstadoSol('${s.id}','Contactada')">📞 Contactada</button>
+      <button class="btn-soft" style="font-size:12px;" onclick="cambiarEstadoSol('${s.id}','Confirmada')">✅ Confirmar</button>
+    </div>
+  </div>`;
+}
+
+// helper local para moneda (evita colisión de nombre)
+function moneda_() { return getSetting('Moneda')||'$'; }
+
+function filtrarSolicitudes(filtro, btn) {
+  document.querySelectorAll('#solFiltros button').forEach(b=>{
+    b.style.background=''; b.style.color='';
+  });
+  btn.style.background='var(--navy)'; btn.style.color='#fff';
+
+  const all = App.data.solicitudes||[];
+  const list = filtro==='Todas' ? all : all.filter(s=>s.estado===filtro);
+  el('solList').innerHTML = list.length
+    ? list.map(solCardHTML).join('')
+    : `<div class="panel card-soft" style="text-align:center;color:var(--muted);">No hay solicitudes con ese estado.</div>`;
+}
+
+function abrirSolDetalle(id) {
+  const s = (App.data.solicitudes||[]).find(x=>x.id===id); if (!s) return;
+  const svcTags = (s.servicios_nombres||'').split('|').filter(Boolean).map(n=>`<span class="sol-servicios-tag">${eh(n)}</span>`).join('');
+
+  openModal('Solicitud — '+eh(s.nombre_cliente),`
+    <div class="row g-3">
+      <div class="col-md-6">
+        <p><b>Cliente:</b> ${eh(s.nombre_cliente)}</p>
+        <p><b>Tel:</b> ${eh(s.telefono_cliente)}</p>
+        <p><b>Email:</b> ${eh(s.email_cliente)}</p>
+        <p><b>Fecha:</b> ${eh(s.fecha_solicitud)}</p>
+      </div>
+      <div class="col-md-6">
+        <div style="background:#f0f9ff;border-radius:12px;padding:14px;text-align:center;">
+          <div style="font-size:11px;color:var(--muted);">Total estimado</div>
+          <div style="font-size:24px;font-weight:800;color:var(--navy);">${moneda_()} ${Number(s.total).toLocaleString('es-AR')}</div>
+        </div>
+      </div>
+      <div class="col-12"><div style="margin-top:4px;">${svcTags}</div></div>
+      ${s.nota_cliente?`<div class="col-12"><p style="font-size:13px;color:var(--muted);">📝 Nota cliente: ${eh(s.nota_cliente)}</p></div>`:''}
+      <div class="col-md-6">
+        <label class="form-label">Estado</label>
+        <select class="form-select" id="solEstadoSel">
+          ${['Nueva','Contactada','Confirmada','Cancelada'].map(e=>`<option${e===s.estado?' selected':''}>${e}</option>`).join('')}
+        </select>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Nota interna</label>
+        <input class="form-control" id="solNotaInterna" value="${eh(s.nota_interna||'')}">
+      </div>
+    </div>
+    <div class="d-flex gap-2 flex-wrap justify-content-between mt-4">
+      <div class="d-flex gap-2 flex-wrap">
+        ${s.telefono_cliente?`<button class="btn-soft" onclick="solWhatsApp('${s.id}')">📲 WhatsApp</button>`:''}
+        ${s.telefono_cliente?`<button class="btn-soft" style="background:#25d366;color:#fff;border-color:#25d366;" onclick="solEnviarPago('${s.id}')">💳 Enviar cobro</button>`:''}
+      </div>
+      <div class="d-flex gap-2">
+        <button class="btn-soft" onclick="closeModal()">Cerrar</button>
+        <button class="btn-navy" onclick="guardarSolEstado('${s.id}')">💾 Guardar</button>
+      </div>
+    </div>`);
+}
+
+function guardarSolEstado(id) {
+  const estado = el('solEstadoSel').value;
+  const nota   = el('solNotaInterna').value;
+  gsRun('apiUpdateSolicitudEstado',[id,estado,nota,App.session], res=>{
+    if (!res.ok) return toast(res.message,'error');
+    closeModal(); toast('Solicitud actualizada.');
+    const s = (App.data.solicitudes||[]).find(x=>x.id===id);
+    if (s) { s.estado=estado; s.nota_interna=nota; }
+    renderSolicitudes(); updateAlertBadge(); if(App.view==='alertas') renderAlertas();
+  });
+}
+
+function cambiarEstadoSol(id, estado) {
+  gsRun('apiUpdateSolicitudEstado',[id,estado,'',App.session], res=>{
+    if (!res.ok) return toast(res.message,'error');
+    const s = (App.data.solicitudes||[]).find(x=>x.id===id);
+    if (s) s.estado=estado;
+    toast('Estado: '+estado);
+    renderSolicitudes(); updateAlertBadge(); if(App.view==='alertas') renderAlertas();
+  });
+}
+
+function solWhatsApp(id) {
+  const s = (App.data.solicitudes||[]).find(x=>x.id===id); if (!s) return;
+  const phone = s.telefono_cliente.replace(/[^\d]/g,'');
+  if (!phone) return toast('Sin teléfono.','error');
+  const empresa = getSetting('Nombre_Empresa')||'Mi Empresa';
+  const msg = `Hola ${s.nombre_cliente} 👋, somos de *${empresa}*. ` +
+    `Recibimos tu solicitud de servicios por ${moneda_()} ${Number(s.total).toLocaleString('es-AR')}. ` +
+    `Te contactamos para coordinar tu turno. ¿Cuándo tenés disponibilidad?`;
+  window.open('https://wa.me/'+phone+'?text='+encodeURIComponent(msg),'_blank');
+}
+
+function solEnviarPago(id) {
+  const s = (App.data.solicitudes||[]).find(x=>x.id===id); if (!s) return;
+  const phone = s.telefono_cliente.replace(/[^\d]/g,'');
+  if (!phone) return toast('Sin teléfono.','error');
+
+  const hasPago = getSetting('Pago_CBU')||getSetting('Pago_Alias')||getSetting('Pago_MP')||getSetting('Pago_Otro_Link');
+  if (!hasPago) { toast('Configurá métodos de pago en ⚙️ Configuración.','error'); return; }
+
+  const metodos = [];
+  if (getSetting('Pago_CBU'))   metodos.push(`🏦 *CBU:* ${getSetting('Pago_CBU')}`);
+  if (getSetting('Pago_Alias')) metodos.push(`🏦 *Alias:* ${getSetting('Pago_Alias')}`);
+  if (getSetting('Pago_MP'))    metodos.push(`💙 *Mercado Pago:* ${getSetting('Pago_MP')}`);
+  if (getSetting('Pago_Otro_Nombre')&&getSetting('Pago_Otro_Link')) {
+    metodos.push(`💳 *${getSetting('Pago_Otro_Nombre')}:* ${getSetting('Pago_Otro_Link')}`);
+  }
+
+  const tpl = getSetting('Plantilla_Pago') ||
+    'Hola {{cliente}} 👋\n\nTe enviamos el detalle de pago:\n\n🛎 *Servicios:* {{servicio}}\n💰 *Monto:* {{moneda}} {{monto}}\n\n{{metodos_pago}}\n\n¡Gracias!';
+
+  const msg = tpl
+    .replace(/\{\{cliente\}\}/g, s.nombre_cliente)
+    .replace(/\{\{servicio\}\}/g, s.servicios_nombres.replace(/\|/g,', '))
+    .replace(/\{\{monto\}\}/g, Number(s.total).toLocaleString('es-AR'))
+    .replace(/\{\{moneda\}\}/g, moneda_())
+    .replace(/\{\{metodos_pago\}\}/g, metodos.join('\n'));
+
+  window.open('https://wa.me/'+phone+'?text='+encodeURIComponent(msg),'_blank');
+}
+
+/* ─────────────────────────────────────────────────────────────────────── */
+
+/* ════════════════════════════════════════════════════
+   UTILS
+════════════════════════════════════════════════════ */
+function diaNombre(n) {
+  return ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'][Number(n)]||n;
+}
+
+function previewPago() {
+  const c = el('pagoPreviewCards'); if (!c) return;
+
+  // Leer valores actuales del formulario si existe, sino desde ajustes
+  const v = id => {
+    const inp = document.querySelector(`#pagosForm [name="${id}"]`);
+    return inp ? inp.value : getSetting(id);
+  };
+
+  const metodos = [
+    { icon:'🏦', label:'CBU',            val:v('Pago_CBU'),   show:!!v('Pago_CBU') },
+    { icon:'🏦', label:'Alias',          val:v('Pago_Alias'), show:!!v('Pago_Alias') },
+    { icon:'💙', label:'Mercado Pago',   val:v('Pago_MP'),    show:!!v('Pago_MP') },
+    { icon:'💳', label:v('Pago_Otro_Nombre')||'Otra billetera', val:v('Pago_Otro_Link'), show:!!v('Pago_Otro_Link') }
+  ].filter(m=>m.show);
+
+  if (!metodos.length) {
+    c.innerHTML=`<div style="background:#fff9ec;border:1px solid #fde68a;border-radius:12px;padding:12px 16px;font-size:13px;color:#92400e;">
+      ⚠️ No hay métodos de pago configurados. Completá al menos uno de los campos de abajo.</div>`;
+    return;
+  }
+
+  c.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:4px;">
+    ${metodos.map(m=>`<div class="pago-metodo-row" style="flex:1;min-width:200px;">
+      <div class="pago-metodo-icon">${m.icon}</div>
+      <div><div class="pago-metodo-label">${eh(m.label)}</div><div class="pago-metodo-val">${eh(m.val)}</div></div>
+    </div>`).join('')}
+  </div>
+  <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:10px 14px;font-size:12px;color:#065f46;margin-top:4px;">
+    ✅ ${metodos.length} método${metodos.length>1?'s':''} activo${metodos.length>1?'s':''}. Al presionar "Enviar pago", se generará un mensaje de WhatsApp con todos estos datos.
+  </div>`;
+}
+
+/* ════════════════════════════════════════════════════
+   LOGOUT
+════════════════════════════════════════════════════ */
+function logout() {
+  try { if (App.session) gsRun('apiLogout',[App.session],()=>{},()=>{}); } catch(e){}
+  localStorage.removeItem(KEYS.session);
+  localStorage.removeItem(KEYS.bootstrap);
+  localStorage.removeItem(KEYS.etags);
+  App.session=null; App.view='dashboard';
+  el('app').classList.add('hidden');
+  el('loginScreen').classList.remove('hidden');
+  el('loginEmail').value=''; el('loginPassword').value='';
+  el('modalRoot').innerHTML='';
+  document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view==='dashboard'));
+  document.querySelectorAll('main section').forEach(s=>s.classList.add('hidden'));
+  el('view-dashboard').classList.remove('hidden');
+  toast('Sesión cerrada.');
+}
+
+function telegramDetectChat(){
+  const form = el('telegramForm');
+  if (!form) return;
+  const obj = Object.fromEntries(new FormData(form).entries());
+  gsRun('apiSaveAjustes',[obj,App.session],res=>{
+    if (!res.ok) return toast(res.message,'error');
+    Object.entries(obj).forEach(([k,v])=>{
+      const row = App.data.ajustes.find(a=>a.clave===k);
+      if (row) row.valor=v; else App.data.ajustes.push({clave:k,valor:v});
+    });
+    toast('Datos de Telegram guardados. Buscando chat...');
+    gsRun('apiTelegramDetectChatId',[App.session],r=>{
+      if (!r.ok) return toast(r.message,'error');
+      const chatId = r.data.chat_id;
+      const inp = el('telegramChatId');
+      if (inp) inp.value = chatId;
+      const row = App.data.ajustes.find(a=>a.clave==='Telegram_Chat_ID');
+      if (row) row.valor=chatId; else App.data.ajustes.push({clave:'Telegram_Chat_ID',valor:chatId});
+      toast('Chat detectado: '+chatId);
+    },err=>toast(err.message,'error'));
+  },err=>toast(err.message,'error'));
+}
+
+function telegramTest(){
+  const form = el('telegramForm');
+  if (!form) return;
+  const obj = Object.fromEntries(new FormData(form).entries());
+  gsRun('apiSaveAjustes',[obj,App.session],res=>{
+    if (!res.ok) return toast(res.message,'error');
+    Object.entries(obj).forEach(([k,v])=>{
+      const row = App.data.ajustes.find(a=>a.clave===k);
+      if (row) row.valor=v; else App.data.ajustes.push({clave:k,valor:v});
+    });
+    gsRun('apiTelegramTest',[App.session],r=>{
+      if (!r.ok) return toast(r.message,'error');
+      toast('Mensaje de prueba enviado a Telegram.');
+    },err=>toast(err.message,'error'));
+  },err=>toast(err.message,'error'));
+}
+
+function telegramRunNow(){
+  gsRun('apiRunTelegramAlertasRealtime',[App.session],r=>{
+    if(!r.ok) return toast(r.message,'error');
+    const d = r.data || {};
+    toast(`Telegram revisado: ${d.enviados||0} enviados, ${d.omitidos||0} ya enviados, ${d.errores||0} errores.`);
+  },err=>toast(err.message,'error'));
+}
+
+</script>
+</body>
+</html>
