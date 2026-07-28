@@ -1,5 +1,5 @@
 const GAS_URL =
-  "https://script.google.com/macros/s/AKfycbxdSoYjdMTxkHomSkoxZR7quDTYJs44qN-okbOnTcwjqNji0dDMm3OcBRp02cGVMBuFvA/exec";
+  "https://script.google.com/macros/s/AKfycbz4Q9lym4hXUIFEOQyget91-11PAsayXHUoINCL5Lru-EOeaZYOpR-kDrLxb74pyaBa/exec";
 
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") {
